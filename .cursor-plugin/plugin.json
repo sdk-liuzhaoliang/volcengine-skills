@@ -1,0 +1,25 @@
+{
+  "name": "volcengine-skills",
+  "displayName": "Volcengine Skills",
+  "description": "Skills and hooks for Volcengine (火山引擎) scenarios",
+  "version": "0.1.0",
+  "author": {
+    "name": "Volcengine Team"
+  },
+  "homepage": "https://github.com/volcengine/volcengine-skills",
+  "repository": "https://github.com/volcengine/volcengine-skills",
+  "license": "MIT",
+  "keywords": [
+    "volcengine",
+    "cloud",
+    "ecs",
+    "vke",
+    "tos",
+    "skills",
+    "hooks"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "commands": "./commands/",
+  "mcpServers": "./.mcp.json"
+}

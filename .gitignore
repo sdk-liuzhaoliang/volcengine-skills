@@ -1,0 +1,34 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node
+node_modules/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Local
+.local/
+.cache/
+
+# 本仓库需要追踪平台 plugin manifest（覆盖可能存在的全局 gitignore）
+!.codex/
+!.opencode/
+!.claude-plugin/
+!.cursor-plugin/
