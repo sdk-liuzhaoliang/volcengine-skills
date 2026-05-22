@@ -32,3 +32,5 @@ build/
 !.opencode/
 !.claude-plugin/
 !.cursor-plugin/
+
+compliance-self-check.md
