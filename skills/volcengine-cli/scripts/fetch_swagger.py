@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
+# SPDX-License-Identifier: MIT
 """
 Fetch Volcengine API Swagger and convert to Markdown documentation.
 Usage: python3 fetch_swagger.py --service ecs --action RunInstances [--version 2020-04-01]
@@ -132,13 +134,25 @@ def format_example(example):
 
 
 def build_params_table(params_list):
-    """Build a markdown table from a list of param dicts."""
+    """Build a markdown table from a list of param dicts.
+
+    The 'required' value can be:
+      - True or "required" → 必填 (always required)
+      - "conditional"      → 条件 (required only if the optional parent is set)
+      - False / "" / None  → optional
+    """
     lines = [
         "| 参数名 | 类型 | 必填 | 说明 | 示例值 |",
         "|--------|------|:----:|------|--------|",
     ]
     for p in params_list:
-        required = "✓" if p.get("required") else ""
+        req = p.get("required")
+        if req is True or req == "required":
+            required = "✓"
+        elif req == "conditional":
+            required = "条件"
+        else:
+            required = ""
         lines.append(
             f"| `{p['name']}` | {p['type']} | {required} | {escape_md(p.get('description', ''))} | {escape_md(format_example(p.get('example', '')))} |"
         )
@@ -175,16 +189,24 @@ def parse_get_params(parameters, schemas):
     return flat, nested
 
 
-def parse_nested_schema(schema_name, schema_dict, parent_prefix, is_array, schemas, visited=None):
-    """Recursively parse a schema into a flat list of param dicts with full paths."""
+def parse_nested_schema(schema_name, schema_dict, parent_prefix, is_array, schemas, visited=None, parent_required=True):
+    """Recursively parse a schema into a flat list of param dicts with full paths.
+
+    parent_required: True iff every ancestor up to the root is required.
+    A field is marked:
+      - "required"    if parent_required AND it is required in its own schema
+      - "conditional" if it is required in its own schema but some ancestor is optional
+      - ""            if it is not required in its own schema
+    """
     if visited is None:
         visited = set()
     if schema_name in visited:
         return []
-    visited = visited | {schema_name}
+    visited.add(schema_name)
 
     params = []
     properties = schema_dict.get("properties", {})
+    required_list = schema_dict.get("required", [])
     sort_order = schema_dict.get("x-sort-params", [])
 
     # Use sort order if provided, otherwise alphabetical
@@ -196,6 +218,14 @@ def parse_nested_schema(schema_name, schema_dict, parent_prefix, is_array, schem
         if prop_name not in properties:
             continue
         prop = properties[prop_name]
+        own_required = prop_name in required_list
+        effective_required = parent_required and own_required
+        if effective_required:
+            req_status = "required"
+        elif own_required:
+            req_status = "conditional"
+        else:
+            req_status = ""
         full_name = f"{parent_prefix}.N.{prop_name}" if is_array else f"{parent_prefix}.{prop_name}"
 
         if "$ref" in prop:
@@ -203,30 +233,31 @@ def parse_nested_schema(schema_name, schema_dict, parent_prefix, is_array, schem
             params.append({
                 "name": full_name,
                 "type": f"object",
-                "required": False,
+                "required": req_status,
                 "description": prop.get("description", ""),
                 "example": prop.get("example"),
             })
-            params.extend(parse_nested_schema(sub_name, sub_schema, full_name, False, schemas, visited))
+            params.extend(parse_nested_schema(sub_name, sub_schema, full_name, False, schemas, visited, parent_required=effective_required))
         elif prop.get("type") == "array" and "$ref" in prop.get("items", {}):
             sub_name, sub_schema = resolve_ref(prop["items"]["$ref"], schemas)
             params.append({
                 "name": full_name,
                 "type": "array[object]",
-                "required": False,
+                "required": req_status,
                 "description": prop.get("description", ""),
                 "example": prop.get("example"),
             })
-            params.extend(parse_nested_schema(sub_name, sub_schema, full_name, True, schemas, visited))
+            params.extend(parse_nested_schema(sub_name, sub_schema, full_name, True, schemas, visited, parent_required=effective_required))
         else:
             params.append({
                 "name": full_name,
                 "type": get_type_str(prop, schemas),
-                "required": False,
+                "required": req_status,
                 "description": prop.get("description", ""),
                 "example": prop.get("example"),
             })
 
+    visited.remove(schema_name)
     return params
 
 
@@ -263,7 +294,7 @@ def parse_post_body(request_body, schemas):
                 "description": description,
                 "example": example,
             })
-            nested_sections.append((key, False, ref_name, ref_schema))
+            nested_sections.append((key, False, ref_name, ref_schema, required))
         elif prop.get("type") == "array" and "$ref" in prop.get("items", {}):
             ref_name, ref_schema = resolve_ref(prop["items"]["$ref"], schemas)
             flat.append({
@@ -273,7 +304,7 @@ def parse_post_body(request_body, schemas):
                 "description": description,
                 "example": example,
             })
-            nested_sections.append((key, True, ref_name, ref_schema))
+            nested_sections.append((key, True, ref_name, ref_schema, required))
         else:
             flat.append({
                 "name": key,
@@ -321,13 +352,15 @@ def swagger_to_markdown(service_code, action_name, version, api_swagger):
         else:
             lines.append("_无独立参数_")
 
-        for (param_name, is_array, schema_name, schema_dict, _, description) in nested_list:
+        for (param_name, is_array, schema_name, schema_dict, parent_req, description) in nested_list:
             type_label = "array[object]" if is_array else "object"
             lines.append(f"\n### 嵌套参数：`{param_name}` ({type_label})\n")
+            if not parent_req:
+                lines.append("_父参数可选，下表中『条件』= 仅在父参数被设置时必填_\n")
             if description and description != param_name:
                 lines.append(f"{description}\n")
             nested_params = parse_nested_schema(
-                schema_name, schema_dict, param_name, is_array, schemas
+                schema_name, schema_dict, param_name, is_array, schemas, parent_required=bool(parent_req)
             )
             if nested_params:
                 lines.append(build_params_table(nested_params))
@@ -339,11 +372,13 @@ def swagger_to_markdown(service_code, action_name, version, api_swagger):
             lines.append("## 请求参数 (Request Body JSON)\n")
             if flat_params:
                 lines.append(build_params_table(flat_params))
-            for (key, is_array, ref_name, ref_schema) in nested_sections:
+            for (key, is_array, ref_name, ref_schema, parent_req) in nested_sections:
                 type_label = "array[object]" if is_array else "object"
                 lines.append(f"\n### 嵌套参数：`{key}` ({type_label})\n")
+                if not parent_req:
+                    lines.append("_父参数可选，下表中『条件』= 仅在父参数被设置时必填_\n")
                 nested_params = parse_nested_schema(
-                    ref_name, ref_schema, key, is_array, schemas
+                    ref_name, ref_schema, key, is_array, schemas, parent_required=bool(parent_req)
                 )
                 if nested_params:
                     lines.append(build_params_table(nested_params))
@@ -353,11 +388,13 @@ def swagger_to_markdown(service_code, action_name, version, api_swagger):
             lines.append("## 请求参数\n")
             if flat_params:
                 lines.append(build_params_table(flat_params))
-            for (param_name, is_array, schema_name, schema_dict, _req, _desc) in nested_list:
+            for (param_name, is_array, schema_name, schema_dict, parent_req, _desc) in nested_list:
                 type_label = "array[object]" if is_array else "object"
                 lines.append(f"\n### 嵌套参数：`{param_name}` ({type_label})\n")
+                if not parent_req:
+                    lines.append("_父参数可选，下表中『条件』= 仅在父参数被设置时必填_\n")
                 nested_params = parse_nested_schema(
-                    schema_name, schema_dict, param_name, is_array, schemas
+                    schema_name, schema_dict, param_name, is_array, schemas, parent_required=bool(parent_req)
                 )
                 if nested_params:
                     lines.append(build_params_table(nested_params))
