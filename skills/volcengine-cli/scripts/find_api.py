@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
+# SPDX-License-Identifier: MIT
 """
 火山引擎 API 搜索工具
 用法：python3 find_api.py <搜索关键词> [--limit N]
