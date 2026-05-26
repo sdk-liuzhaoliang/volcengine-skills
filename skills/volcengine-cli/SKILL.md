@@ -12,6 +12,7 @@ description: >-
 argument-hint: <task description, e.g., "create an ECS instance in the Beijing region">
 user-invocable: true
 allowed-tools: Bash, Read, Write
+license: MIT
 metadata:
   openclaw:
     requires:

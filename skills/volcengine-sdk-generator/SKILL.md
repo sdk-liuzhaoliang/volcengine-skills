@@ -13,6 +13,7 @@ description: >
   When the user only needs API specification queries (parameters, error codes, response structures),
   hand off to the volcengine-api skill. When the user needs CLI-based operations, hand off to
   the volcengine-cli skill. Supports both Chinese and English prompts.
+license: MIT
 ---
 
 # Volcengine SDK Code Generator
