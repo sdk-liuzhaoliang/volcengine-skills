@@ -13,6 +13,7 @@ description: >
   When the user needs runnable SDK code, hand off to the volcengine-sdk-generator skill.
   When the user needs CLI-based operations, hand off to the volcengine-cli skill.
   Supports both Chinese and English prompts.
+license: MIT
 ---
 
 # Volcengine API Query Assistant
