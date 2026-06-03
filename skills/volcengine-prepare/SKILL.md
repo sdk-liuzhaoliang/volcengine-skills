@@ -8,22 +8,22 @@ description: >-
   before deploying". This skill prepares the decision; `volcengine-deploy` performs the
   chosen deployment, and `volcengine-iac` is used only when the user chooses Terraform/IaC
   or the task already has an IaC workflow.
-version: 1.0.0
-user-invocable: true
-allowed-tools: Bash, Read, Write
-argument-hint: <local-repo-path or git-url>
+license: MIT
 metadata:
   openclaw:
-    primaryEnv: VOLCENGINE_ACCESS_KEY
-    requires:
-      env:
-        - VOLCENGINE_ACCESS_KEY
-        - VOLCENGINE_SECRET_KEY
-        - VOLCENGINE_REGION
-      bins:
-        - ve
-        - git
-        - jq
+    envVars:
+      - name: VOLCENGINE_ACCESS_KEY
+        required: false
+        description: AccessKey for AK/SK auth path (alternative to `ve login`)
+      - name: VOLCENGINE_SECRET_KEY
+        required: false
+        description: SecretKey for AK/SK auth path
+      - name: VOLCENGINE_SESSION_TOKEN
+        required: false
+        description: Optional STS session token for temporary credentials
+      - name: VOLCENGINE_REGION
+        required: false
+        description: Default region; falls back to cn-beijing if unset
 ---
 
 # Volcengine Prepare Skill

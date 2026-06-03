@@ -1,10 +1,6 @@
 ---
 name: volcengine-vefaas
 description: Deploy and manage serverless applications on Volcengine veFaaS. Use when the user wants to deploy web apps, manage functions (pull code, upload and deploy), configure environment variables, or work with veFaaS services.
-version: 1.0.0
-user-invocable: true
-allowed-tools: Bash(vefaas:*)
-argument-hint: <local-repo-path or app-name>
 metadata:
   openclaw:
     requires:

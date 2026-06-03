@@ -5,23 +5,28 @@ description: >-
   Terraform/IaC, already has a Terraform workflow/state, or confirms they need
   plan/diff/drift/destroy safety for VKE, managed databases/cache/storage, load balancers,
   domains/certificates, logging/monitoring, or team-managed infrastructure.
-version: 1.0.0
-user-invocable: true
-allowed-tools: Bash, Read, Write, WebFetch
-argument-hint: <project-name or .volcengine/deploy-choice.json>
+license: MIT
 metadata:
   openclaw:
-    primaryEnv: VOLCENGINE_ACCESS_KEY
     requires:
-      env:
-        - VOLCENGINE_ACCESS_KEY
-        - VOLCENGINE_SECRET_KEY
-        - VOLCENGINE_REGION
       bins:
         - terraform
         - jq
         - git
         - python3
+    envVars:
+      - name: VOLCENGINE_ACCESS_KEY
+        required: false
+        description: AccessKey for AK/SK auth path (alternative to `ve login`)
+      - name: VOLCENGINE_SECRET_KEY
+        required: false
+        description: SecretKey for AK/SK auth path
+      - name: VOLCENGINE_SESSION_TOKEN
+        required: false
+        description: Optional STS session token for temporary credentials
+      - name: VOLCENGINE_REGION
+        required: false
+        description: Default region; falls back to cn-beijing if unset
 ---
 
 # Volcengine IaC Skill
