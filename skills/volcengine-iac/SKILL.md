@@ -8,12 +8,6 @@ description: >-
 license: MIT
 metadata:
   openclaw:
-    requires:
-      bins:
-        - terraform
-        - jq
-        - git
-        - python3
     envVars:
       - name: VOLCENGINE_ACCESS_KEY
         required: false

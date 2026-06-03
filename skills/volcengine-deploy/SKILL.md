@@ -10,13 +10,6 @@ description: >-
   management (`cli` or `iac`): use `volcengine-iac` only when the user chooses Terraform/IaC
   or already has an IaC workflow; otherwise use direct `ve` CLI creation with a resource ledger.
 license: MIT
-metadata:
-  openclaw:
-    requires:
-      bins:
-        - git
-        - jq
-        - curl
 ---
 
 # Volcengine Deploy Skill

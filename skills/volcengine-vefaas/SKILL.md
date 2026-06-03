@@ -1,13 +1,6 @@
 ---
 name: volcengine-vefaas
 description: Deploy and manage serverless applications on Volcengine veFaaS. Use when the user wants to deploy web apps, manage functions (pull code, upload and deploy), configure environment variables, or work with veFaaS services.
-metadata:
-  openclaw:
-    requires:
-      bins:
-        - vefaas
-        - node
-        - npm
 ---
 
 # volcengine-vefaas: Volcengine FaaS CLI

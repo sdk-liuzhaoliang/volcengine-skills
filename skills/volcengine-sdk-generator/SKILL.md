@@ -12,12 +12,6 @@ description: >
   schemas, pagination, or API comparisons, hand off to volcengine-api. If they need CLI-based
   operations, hand off to volcengine-cli.
 license: MIT
-metadata:
-  openclaw:
-    requires:
-      bins: 
-         - python3
-         - rg
 ---
 
 # Volcengine SDK Generator
