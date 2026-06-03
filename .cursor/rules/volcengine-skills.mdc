@@ -1,0 +1,25 @@
+---
+description: Volcengine (火山引擎) skills available in this repository's skills/ directory
+alwaysApply: true
+---
+
+# Volcengine Skills
+
+This repository ships skills for Volcengine (火山引擎) scenarios under `skills/`.
+When a task involves Volcengine — operating cloud resources, deploying an app,
+managing infrastructure, or generating SDK code — read the relevant
+`skills/<skill-name>/SKILL.md` and follow it.
+
+Available skills:
+
+- `volcengine-cli` — operate cloud resources via the `ve` CLI (ECS/VPC/CLB/RDS/Redis/TOS).
+- `volcengine-prepare` — analyze a repo and recommend a deploy mode (ECS/VKE/veFaaS).
+- `volcengine-deploy` — deploy a local dir or GitHub repo to Volcengine (ECS/VKE).
+- `volcengine-iac` — Terraform-based infrastructure for Volcengine.
+- `volcengine-sdk-generator` — generate Volcengine SDK code examples and answer SDK configuration questions.
+- `volcengine-api` — query Volcengine API specifications.
+- `volcengine-tosutil` — access and manage TOS object storage resources on Volcengine.
+- `volcengine-vefaas` — deploy and manage serverless applications on Volcengine veFaaS.
+
+Trigger on Volcengine / 火山引擎 / 火山 keywords, `ve` commands, or
+`VOLCENGINE_ACCESS_KEY` / `VOLCENGINE_SECRET_KEY` / `VOLCENGINE_REGION` usage.

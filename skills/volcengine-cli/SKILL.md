@@ -10,6 +10,7 @@ description: >-
   "火山引擎创建一个 VPC"、"火山的 Redis 实例列一下"). Also trigger when the user encounters
   errors from `ve` commands and needs troubleshooting help.
 argument-hint: <task description, e.g., "create an ECS instance in the Beijing region">
+version: 1.0.9
 user-invocable: true
 allowed-tools: Bash, Read, Write
 license: MIT
@@ -18,6 +19,8 @@ metadata:
     requires:
       bins:
         - ve
+        - jq
+        - python3
     install:
       - kind: node
         package: "@volcengine/cli"
@@ -29,9 +32,15 @@ metadata:
       - name: VOLCENGINE_SECRET_KEY
         required: false
         description: SecretKey for AK/SK auth path
+      - name: VOLCENGINE_SESSION_TOKEN
+        required: false
+        description: Optional STS session token for temporary credentials
       - name: VOLCENGINE_REGION
         required: false
         description: Default region; falls back to cn-beijing if unset
+      - name: VOLCENGINE_ENDPOINT
+        required: false
+        description: Optional fallback endpoint for extension calls that do not define a product endpoint
 ---
 
 # Volcengine CLI Skill
@@ -250,9 +259,24 @@ python3 scripts/fetch_swagger.py --service <ServiceCode> --action <ActionName>
 
 # List all APIs for a service
 python3 scripts/fetch_swagger.py --service <ServiceCode> --list
+
+# Call Extension APIs that public API Explorer/ve does not expose
+python3 scripts/call_extend_api.py --list
+python3 scripts/call_extend_api.py --describe QueryMetrics
 ```
 
 > Always pass the **base service name** to scripts/fetch_swagger.py (e.g., `--service iam`, not `iam20210801`) — the script auto-detects the version.
+
+### Extension APIs
+
+Some extension APIs are not exposed through `ve`.
+For those, consult [references/extend-apis.md](references/extend-apis.md) and use:
+
+```bash
+python3 scripts/call_extend_api.py --api <APIName> --params '{"Key":"Value"}'
+```
+
+The helper resolves `service`, `version`, `method`, endpoint, and content type from its registry. Apply the same read/write/destructive confirmation rules before running extension APIs.
 
 ---
 
@@ -327,5 +351,20 @@ done
 Consult or update the corresponding notes file when encountering service-specific issues:
 
 - ECS: [references/ecs.md](references/ecs.md)
+- VPC: [references/vpc.md](references/vpc.md)
+- CR: [references/cr.md](references/cr.md)
+- ALB: [references/alb.md](references/alb.md)
+- CLB: [references/clb.md](references/clb.md)
+- VKE: [references/vke.md](references/vke.md)
+- veFaaS: [references/vefaas.md](references/vefaas.md)
+- RDS: [references/rds.md](references/rds.md)
+- Message Queue: [references/mq.md](references/mq.md)
+- Storage: [references/storage.md](references/storage.md)
+- Observability: [references/observability.md](references/observability.md)
+- DNS/Edge: [references/dns-edge.md](references/dns-edge.md)
 - IAM: [references/iam.md](references/iam.md)
+- KMS: [references/kms.md](references/kms.md)
 - Redis: [references/redis.md](references/redis.md)
+- NAT Gateway: [references/natgateway.md](references/natgateway.md)
+- EBS: [references/ebs.md](references/ebs.md)
+- Extension APIs: [references/extend-apis.md](references/extend-apis.md)

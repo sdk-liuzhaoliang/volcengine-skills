@@ -1,6 +1,6 @@
 # 在 OpenCode 中安装 volcengine-skills
 
-> **注意**：本仓库当前处于 init 阶段，OpenCode 的 plugin.js 运行时**尚未实现**。当前 OpenCode 用户建议通过 symlink 方式挂载 `skills/` 目录（见下）。待 plugin runtime 落地后，本文档会更新为 plugin 安装方式。
+本仓库自带 `.opencode/opencode.json`，已通过 `skills.paths` 声明 `skills/` 目录，OpenCode 在仓库内即可直接发现这些 skill。若要全局安装（在任意项目使用），按下面的 symlink 方式挂载。
 
 ## 前置条件
 
@@ -60,4 +60,3 @@ rm -rf ~/.config/opencode/volcengine-skills
 ## 问题反馈
 
 - Issue：https://github.com/volcengine/volcengine-skills/issues
-- 贡献规范：[`docs/contributing-guide.md`](../docs/contributing-guide.md)

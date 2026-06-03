@@ -28,9 +28,9 @@ build/
 .cache/
 
 # 本仓库需要追踪平台 plugin manifest（覆盖可能存在的全局 gitignore）
-!.codex/
+!.agents/
 !.opencode/
 !.claude-plugin/
-!.cursor-plugin/
+!.cursor/
 
 compliance-self-check.md

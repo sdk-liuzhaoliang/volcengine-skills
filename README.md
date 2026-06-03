@@ -1,6 +1,8 @@
 # volcengine-skills
 
-火山引擎团队维护的 skill 仓库，面向火山引擎（Volcengine）使用场景，为 Claude Code / Codex / Gemini CLI 等 agent 提供开箱即用的 skills 与 hooks。
+[English](./README_en.md) | **简体中文**
+
+火山引擎团队维护的 skill 仓库，面向火山引擎（Volcengine）使用场景，为 Claude Code / Codex / OpenCode / Cursor / Gemini CLI 等 agent 提供开箱即用的 skills。
 
 **[快速安装 →](#快速安装)**
 
@@ -8,35 +10,42 @@
 
 ### Skills
 
-按场景封装的、agent 可自动触发的能力。每个 skill 一个子目录，命名以 `volcengine-` 为前缀。
-
-> _暂无 skill（仓库处于 init 阶段，skills 会随后续 MR 陆续落入）。_
->
-> 落入后此列表将更新为：
->
-> | Skill | 场景 |
-> | --- | --- |
-> | _待填充_ | _待填充_ |
-
-### Hooks
-
-跨 skill 复用的钩子（session-start 注入、tool-pre 校验等）。
-
-> _暂无 hook。_
-
-### Commands & Agents
-
-仓库级 slash commands 与 subagent 配置。
-
-> _暂无。_
+| Skill | 场景 |
+| --- | --- |
+| `volcengine-cli` | 用 `ve` CLI 创建/查询/管理云资源（ECS/VPC/CLB/RDS/Redis/TOS 等） |
+| `volcengine-prepare` | 分析本地目录或 GitHub 仓库，推荐部署形态（ECS/VKE/veFaaS） |
+| `volcengine-deploy` | 把本地目录或 GitHub 仓库部署到火山引擎 |
+| `volcengine-iac` | 基于 Terraform 的火山引擎基础设施编排 |
+| `volcengine-api` | 查询火山引擎 API 规格（参数、错误码、返回结构等） |
+| `volcengine-sdk-generator` | 生成可运行的火山引擎 SDK 示例，并按需回答 SDK 配置问题 |
+| `volcengine-tosutil` | 管理火山引擎 TOS 对象存储资源 |
+| `volcengine-vefaas` | 部署与管理火山引擎 veFaaS serverless 应用 |
 
 ## 快速安装
 
-### 前置条件
+### 前置依赖
 
-- 已配置火山引擎鉴权环境变量（`VOLCENGINE_ACCESS_KEY` / `VOLCENGINE_SECRET_KEY` / `VOLCENGINE_REGION`）
-- 已安装 `ve`（Volcengine CLI），可被 skill 调用
-- 对应 agent host 已就绪（Claude Code / Codex / Gemini CLI 任一）
+#### 安装 ve 和 vefaas
+
+```bash
+npm i -g @volcengine/cli
+npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.tgz
+```
+
+#### 安装 tosutil
+
+见 [安装命令](./skills/volcengine-tosutil/SKILL.md#安装命令)
+
+### 通用安装
+
+```bash
+# 一键安装全部技能（推荐）
+npx skills add volcengine/volcengine-skills
+
+# 或手动复制
+# 将 skills/ 目录复制到 ~/.claude/skills/ (适用于 claude code)
+# 将 skills/ 目录复制到 ~/.agents/skills/ (适用于 codex 等)
+```
 
 ### Claude Code
 
@@ -46,10 +55,11 @@
 /plugin marketplace add volcengine/volcengine-skills
 ```
 
-**安装 plugin**：
+**安装并重新加载 plugin**：
 
 ```bash
 /plugin install volcengine@volcengine-skills
+/reload-plugins
 ```
 
 **更新**：
@@ -58,42 +68,49 @@
 /plugin marketplace update volcengine-skills
 ```
 
+### Codex
+
+```bash
+codex plugin marketplace add volcengine/volcengine-skills
+```
+
+```text
+然后进入 Codex，执行 /plugins，选择 volcengine-skills 安装即可
+```
+
 ### Gemini CLI
 
 ```bash
 gemini extensions install https://github.com/volcengine/volcengine-skills
 ```
 
-### Codex / 其他 host
+### OpenCode
 
-将本仓库 clone 到本地后挂载：
+直接在 OpenCode 中输入：
 
-```bash
-git clone https://github.com/volcengine/volcengine-skills ~/.agent-skills/volcengine-skills
+```text
+Fetch and follow instructions from https://github.com/volcengine/volcengine-skills/blob/main/.opencode/INSTALL.md
 ```
 
-然后在对应 host 的配置里把 `~/.agent-skills/volcengine-skills/skills` 纳入 skills 搜索路径。
+### Cursor
+
+在 Cursor Agent 聊天中输入：
+
+```text
+/add-plugin volcengine-skills@https://github.com/volcengine/volcengine-skills
+```
 
 ## 目录结构
 
 ```
 volcengine-skills/
-├── skills/           # 所有 skill（一个 skill 一个子目录）
-├── hooks/            # 所有 hook
-├── commands/         # slash commands
-├── agents/           # subagent 配置
-├── scripts/          # 通用辅助脚本
-├── docs/             # 规范文档
-│   ├── contributing-guide.md   # 贡献规范
-│   └── skill-spec.md           # 机器可读校验规格
-└── tests/            # 仓库级测试
+├── skills/                 # 所有的 skill
+├── .claude-plugin/         # Claude Code plugin / marketplace manifest
+├── .codex-plugin/          # Codex plugin / marketplace manifest
+├── .opencode/              # OpenCode 配置
+├── .cursor/                # Cursor 规则
+└── gemini-extension.json   # Gemini CLI 扩展清单
 ```
-
-## 贡献
-
-- 先读 [`docs/contributing-guide.md`](./docs/contributing-guide.md)（附 `/volcengine-skill-validator` 一键校验）
-- skill 必须以 `volcengine-` 为前缀，env / bin 依赖必须在 `metadata.openclaw.requires` 中声明
-- 单次 MR 只解决一个问题；commit message 遵循 [Conventional Commits](https://www.conventionalcommits.org/)
 
 ## License
 

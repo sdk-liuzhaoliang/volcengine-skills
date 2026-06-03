@@ -70,12 +70,7 @@
 
 > 以下章节仅对 Volcengine 团队的内部维护者适用。
 
-如果你是 Volcengine 团队成员，需要新增或修改 skill，请阅读：
-
-- [`docs/contributing-guide.md`](./docs/contributing-guide.md) — skill 命名 / frontmatter / openclaw / CI 规范
-- [`docs/skill-spec.md`](./docs/skill-spec.md) — 机器可读的校验规则
-
-并通过内部代码仓库（Bits-Code）的 MR 流程提交变更，由 reviewer 通过后同步到 GitHub。
+如果你是 Volcengine 团队成员，需要新增或修改 skill，请通过内部代码仓库（Bits-Code）的 MR 流程提交变更，由 reviewer 通过后同步到 GitHub。
 
 ---
 
