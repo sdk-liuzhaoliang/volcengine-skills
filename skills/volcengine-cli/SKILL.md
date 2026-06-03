@@ -15,8 +15,6 @@ metadata:
     requires:
       bins:
         - ve
-        - jq
-        - python3
     install:
       - kind: node
         package: "@volcengine/cli"

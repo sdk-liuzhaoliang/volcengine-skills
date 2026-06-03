@@ -4,14 +4,6 @@ description: Use when the user encounters VolcEngine errors or needs local troub
 license: MIT
 metadata:
   openclaw:
-     requires:
-        bins:
-           - ve
-           - python3
-     install:
-        - kind: node
-          package: "@volcengine/cli"
-          bins: [ve]
      envVars:
         - name: VOLCENGINE_ACCESS_KEY
           required: false
