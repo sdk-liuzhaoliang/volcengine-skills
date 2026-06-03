@@ -11,15 +11,13 @@ description: >
   If the user only needs API parameters, enum values, required fields, error codes, response
   schemas, pagination, or API comparisons, hand off to volcengine-api. If they need CLI-based
   operations, hand off to volcengine-cli.
-version: 1.0.4
-user-invocable: true
-allowed-tools: Bash, Read
 license: MIT
 metadata:
   openclaw:
     requires:
-      bins: [python3]
-      anyBins: [rg]
+      bins: 
+         - python3
+         - rg
 ---
 
 # Volcengine SDK Generator

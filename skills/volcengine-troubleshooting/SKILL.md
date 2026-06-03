@@ -1,15 +1,30 @@
 ---
 name: volcengine-troubleshooting
 description: Use when the user encounters VolcEngine errors or needs local troubleshooting for OpenAPI, Python SDK, CLI, IAM, billing, compute, networking, storage, database, CDN, media, AI, security, or VKE cases.
-version: 0.2.0
-user-invocable: true
-allowed-tools: Bash, Read, Glob
+license: MIT
 metadata:
   openclaw:
-    primaryEnv: VOLCENGINE_ACCESS_KEY
-    requires:
-      env: [VOLCENGINE_ACCESS_KEY, VOLCENGINE_SECRET_KEY, VOLCENGINE_REGION, VOLCENGINE_SESSION_TOKEN]
-      bins: [ve, tosutil, python3]
+     requires:
+        bins:
+           - ve
+           - python3
+     install:
+        - kind: node
+          package: "@volcengine/cli"
+          bins: [ve]
+     envVars:
+        - name: VOLCENGINE_ACCESS_KEY
+          required: false
+          description: AccessKey for AK/SK auth path (alternative to `ve login`)
+        - name: VOLCENGINE_SECRET_KEY
+          required: false
+          description: SecretKey for AK/SK auth path
+        - name: VOLCENGINE_SESSION_TOKEN
+          required: false
+          description: Optional STS session token for temporary credentials
+        - name: VOLCENGINE_REGION
+          required: false
+          description: Default region; falls back to cn-beijing if unset
 ---
 
 # VolcEngine Troubleshooting

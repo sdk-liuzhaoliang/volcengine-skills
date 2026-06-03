@@ -9,10 +9,7 @@ description: >-
   when the user has not chosen a deployment path. Ask the user to choose resource
   management (`cli` or `iac`): use `volcengine-iac` only when the user chooses Terraform/IaC
   or already has an IaC workflow; otherwise use direct `ve` CLI creation with a resource ledger.
-version: 1.0.0
-user-invocable: true
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch
-argument-hint: <local-repo-path or git-url>
+license: MIT
 metadata:
   openclaw:
     requires:

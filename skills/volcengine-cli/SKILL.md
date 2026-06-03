@@ -9,10 +9,6 @@ description: >-
   mentioning "火山引擎" or "火山" (e.g., "火山引擎上有哪些 ECS"、"查一下我火山的云服务器"、
   "火山引擎创建一个 VPC"、"火山的 Redis 实例列一下"). Also trigger when the user encounters
   errors from `ve` commands and needs troubleshooting help.
-argument-hint: <task description, e.g., "create an ECS instance in the Beijing region">
-version: 1.0.9
-user-invocable: true
-allowed-tools: Bash, Read, Write
 license: MIT
 metadata:
   openclaw:
