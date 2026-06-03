@@ -1,7 +1,7 @@
 {
-  "name": "volcengine-skills",
-  "description": "Skills and hooks for Volcengine (火山引擎) scenarios. See docs/contributing-guide.md for contribution rules.",
-  "version": "0.1.0",
+  "name": "volcengine",
+  "description": "Skills for Volcengine (火山引擎) scenarios: cloud resource operations (ECS/VPC/VKE/CLB/RDS/Redis/TOS), deployment, IaC, and SDK code generation.",
+  "version": "1.0.0",
   "author": {
     "name": "Volcengine Team"
   },
@@ -11,11 +11,13 @@
   "keywords": [
     "volcengine",
     "cloud",
+    "cli",
     "ecs",
     "vke",
     "tos",
-    "skills",
-    "hooks"
+    "skills"
   ],
-  "mcpServers": "./.mcp.json"
+  "skills": [
+    "./skills/"
+  ]
 }

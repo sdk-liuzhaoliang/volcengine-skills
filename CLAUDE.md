@@ -1,17 +1,17 @@
 # volcengine-skills
 
-本仓库是 Volcengine Team 维护的 skill 仓库，为 AI coding agent（Claude Code / Codex / Gemini CLI）提供面向**火山引擎（Volcengine）**场景的开箱即用能力。
+本仓库是 Volcengine Team 维护的 skill 仓库，为 AI coding agent（Claude Code / Codex / OpenCode / Cursor / Gemini CLI）提供面向**火山引擎（Volcengine）**场景的开箱即用能力。
 
 ## 仓库提供什么
 
 - `skills/` — 按场景封装的、可被 agent 自动触发的 skill（每个 skill 一个 `volcengine-<xxx>/` 子目录）
-- `hooks/` — 跨 skill 复用的 hook（session-start 注入、tool-pre 校验等）
-- `commands/` — slash commands
-- `agents/` — subagent 配置
-- `scripts/` — 仓库级辅助脚本
-- `docs/` — 规范文档
+- `hooks/` — 跨 skill 复用的 hook（session-start 注入、tool-pre 校验等），暂无
+- `commands/` — slash commands，暂无
+- `agents/` — subagent 配置，暂无
+- `scripts/` — 仓库级辅助脚本，暂无
+- `docs/` — 规范文档，暂无
 
-> **当前状态**：仓库处于早期阶段，骨架已搭好但 skills/hooks 尚未填充，会随后续 MR 陆续落入。如你在 `skills/` 下没看到想要的能力，优先检查是否已有相关 MR 在评审中。
+> **当前状态**：已经提供 skills，会随后续陆续补充其他能力。如你在 `skills/` 下没看到想要的能力，优先检查是否已有相关 MR 在评审中。
 
 ## 什么时候用本仓库
 
@@ -27,20 +27,26 @@
 
 修改或新增 skill 前：
 
-- 先看 [`docs/contributing-guide.md`](./docs/contributing-guide.md) 的 §0「熟练者极简自查（10 秒扫完）」
-- 机器可读校验规则见 [`docs/skill-spec.md`](./docs/skill-spec.md)
 - 所有 skill **必须**以 `volcengine-` 为前缀，读 env / 调 bin 必须在 `metadata.openclaw.requires` 声明
+
+## 新增一个 skill 要改哪些文件
+
+新增 `skills/volcengine-<name>/` 后，下面这些**硬编码了 skill 清单**的文件都要同步加一行，否则不同 agent 看到的清单会漂移：
+
+- `skills/volcengine-<name>/SKILL.md` — skill 本体（frontmatter 里的 `name` / `description`）
+- `README.md` — 「Skills」表格
+- `README_en.md` — 「Skills」表格（英文，描述与中文对应）
+- `.cursor/rules/volcengine-skills.mdc` — Available skills 列表
+- `GEMINI.md` — Available skills 列表
+
+**不需要改**：`.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`.codex-plugin/plugin.json`、`.opencode/opencode.json`、`gemini-extension.json` —— 这些都用 `./skills/` 整目录引用，新增 skill 会被自动发现。
+
+> 改完后核对一遍：上面 4 个清单文件里的 skill 名称必须完全一致（含 `volcengine-` 前缀），不要出现漏项或简写。
 
 ## 当前已提供的 skill
 
-> 暂无（init 阶段）。当 skill 落入后，此列表会更新为：
->
-> ```
-> - volcengine-cli          — ECS/VPC/CLB/RDS/Redis 等云资源操作（ve 命令封装）
-> - volcengine-vke-ops      — VKE 集群运维
-> - ...
-> ```
+见 [README 的 Skills 表](./README.md#skills)
 
 ## 当前已提供的 hook
 
-> 暂无（init 阶段）。
+> 暂无。

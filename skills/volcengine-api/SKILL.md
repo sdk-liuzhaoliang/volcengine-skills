@@ -1,18 +1,17 @@
 ---
 name: volcengine-api
 description: >
-  Query and answer questions about Volcengine API specifications. Trigger this skill whenever a user
-  asks about Volcengine API parameters, error codes, request methods, enum values, required fields,
-  response structures, pagination, parameter dependencies, or API comparisons — even if they don't
-  explicitly say "API". Typical triggers include questions like "What parameters does DescribeInstances
-  have?", "What values does Status support?", "What does InvalidInstanceId.NotFound mean?",
-  "Does Volcengine have a batch tag deletion API?", "Which APIs does ECS support?",
-  "How do I pass parameters to CreateDatabase?", "Is ChargeType required?",
-  "What fields does DescribeInstances return?", "How do I paginate instance lists?",
-  "What's the difference between these two APIs?", "RunInstances returns InvalidParameterValue".
-  When the user needs runnable SDK code, hand off to the volcengine-sdk-generator skill.
-  When the user needs CLI-based operations, hand off to the volcengine-cli skill.
-  Supports both Chinese and English prompts.
+  Query and answer questions about Volcengine API specifications. Use when the user asks about
+  API parameters, error codes, request methods, enum values, required fields, response structures,
+  pagination, parameter dependencies, service capability lists, API availability, or API comparisons,
+  even if they do not explicitly say "API". Typical intent includes checking what an action supports,
+  which fields are required, what values a parameter accepts, why an API returns a specific error,
+  how to pass nested or body parameters, how pagination works, what an API response contains,
+  whether a batch operation exists, what services or versions expose an operation, or how two APIs
+  differ. Use API Explorer data as the authoritative source and preserve constraints, examples, and
+  caveats found in the spec. Answer in Chinese or English. When the user needs runnable SDK code,
+  language-specific examples, or SDK configuration, hand off to volcengine-sdk-generator. When they
+  need CLI operations, hand off to volcengine-cli.
 license: MIT
 ---
 
