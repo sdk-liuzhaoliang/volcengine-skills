@@ -5,6 +5,7 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+.trae/
 *.swp
 *.swo
 
@@ -27,6 +28,10 @@ build/
 .local/
 .cache/
 
+# Superpowers (plans, specs, etc.)
+superpowers/
+**/superpowers/
+
 # 本仓库需要追踪平台 plugin manifest（覆盖可能存在的全局 gitignore）
 !.agents/
 !.opencode/
@@ -34,3 +39,4 @@ build/
 !.cursor/
 
 compliance-self-check.md
+report/

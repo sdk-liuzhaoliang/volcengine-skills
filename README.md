@@ -20,6 +20,7 @@
 | `volcengine-sdk-generator` | 生成可运行的火山引擎 SDK 示例，并按需回答 SDK 配置问题 |
 | `volcengine-tosutil` | 管理火山引擎 TOS 对象存储资源 |
 | `volcengine-vefaas` | 部署与管理火山引擎 veFaaS serverless 应用 |
+| `volcengine-troubleshooting` | 火山引擎故障排查与诊断 |
 
 ## 快速安装
 

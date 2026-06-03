@@ -20,6 +20,7 @@ A skills repository maintained by the Volcengine team, targeting Volcengine use 
 | `volcengine-sdk-generator` | Generate runnable Volcengine SDK examples and answer SDK config questions on demand |
 | `volcengine-tosutil` | Manage Volcengine TOS object storage resources |
 | `volcengine-vefaas` | Deploy and manage Volcengine veFaaS serverless applications |
+| `volcengine-troubleshooting` | Troubleshoot and diagnose Volcengine issues |
 
 ## Quick Install
 
