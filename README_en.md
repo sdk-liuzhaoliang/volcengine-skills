@@ -40,8 +40,16 @@ See [installation commands](./skills/volcengine-tosutil/SKILL.md#安装命令).
 ### Generic Install
 
 ```bash
-# Install all skills in one step (recommended)
+# Choose one of the following three
+
+# 1) Recommended: install globally, skip all confirmation prompts
+npx skills add volcengine/volcengine-skills --global --yes
+
+# 2) Interactive: manually choose scope (global/project), target agents, and specific skills
 npx skills add volcengine/volcengine-skills
+
+# 3) Install to specific agents only, copying files instead of symlinking (eg. Claude Code)
+npx skills add volcengine/volcengine-skills --global --yes --agent claude-code --copy
 
 # Or copy manually
 # Copy the skills/ directory to ~/.claude/skills/ (for Claude Code)

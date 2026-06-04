@@ -29,7 +29,9 @@ LANG_ALIASES = {
     "php": "PHP",
     "curl": "CURL",
     "shell": "CURL",
-    "openai": "OPENAI",
+    "node": "NODEJS",
+    "nodejs": "NODEJS",
+    "node.js": "NODEJS",
 }
 
 
@@ -913,6 +915,8 @@ def line_assigns_mocked_param(language: str, line: str, param_name: str) -> bool
         return bool(re.search(rf"\b{re.escape(snake_case(param_name))}\s*=", line))
     if lang == "GO":
         return bool(re.search(rf"\b{re.escape(param_name)}\s*:", line))
+    if lang == "NODEJS":
+        return bool(re.search(rf"\b{re.escape(param_name)}\s*:", line))
     if lang == "JAVA":
         return f"set{param_name}(" in line
     if lang == "PHP":
@@ -950,6 +954,8 @@ def annotate_mocked_assignment_line(language: str, line: str, param_name: str, m
     if lang == "JAVA" and assigns_param:
         return append_line_comment(line, "// mock 值，调用前请替换")
     if lang == "PHP" and assigns_param:
+        return append_line_comment(line, "// mock 值，调用前请替换")
+    if lang == "NODEJS" and assigns_param:
         return append_line_comment(line, "// mock 值，调用前请替换")
     if lang == "CURL":
         return line
