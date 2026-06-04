@@ -40,11 +40,19 @@ npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.t
 ### 通用安装
 
 ```bash
-# 一键安装全部技能（推荐）
+# 以下三条任选其一
+
+# 1) 推荐：全局安装、跳过所有确认提示
+npx skills add volcengine/volcengine-skills --global --yes
+
+# 2) 交互式：手动选择安装范围（global/project）、目标 agent 和具体 skill
 npx skills add volcengine/volcengine-skills
 
+# 3) 只装到指定 agent，并用复制代替软链（如安装到 Claude Code）
+npx skills add volcengine/volcengine-skills --global --yes --agent claude-code --copy
+
 # 或手动复制
-# 将 skills/ 目录复制到 ~/.claude/skills/ (适用于 claude code)
+# 将 skills/ 目录复制到 ~/.claude/skills/ (适用于 Claude Code)
 # 将 skills/ 目录复制到 ~/.agents/skills/ (适用于 codex 等)
 ```
 
