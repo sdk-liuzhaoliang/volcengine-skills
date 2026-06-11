@@ -22,6 +22,7 @@ A skills repository maintained by the Volcengine team, targeting Volcengine use 
 | `volcengine-vefaas` | Deploy and manage Volcengine veFaaS serverless applications |
 | `volcengine-supabase` | Manage Volcengine AIDAP database workspaces (Supabase / PostgreSQL) and use them as deployment database providers |
 | `volcengine-troubleshooting` | Troubleshoot and diagnose Volcengine issues |
+| `volcengine-knowledge-search` | Search Volcengine official docs and fetch full text (product concepts/usage/billing/deploy/best practices/terms) |
 
 ## Quick Install
 
