@@ -21,6 +21,7 @@ A skills repository maintained by the Volcengine team, targeting Volcengine use 
 | `volcengine-tosutil` | Manage Volcengine TOS object storage resources |
 | `volcengine-vefaas` | Deploy and manage Volcengine veFaaS serverless applications |
 | `volcengine-troubleshooting` | Troubleshoot and diagnose Volcengine issues |
+| `volcengine-knowledge-search` | Search Volcengine official docs and fetch full text (product concepts/usage/billing/deploy/best practices/terms) |
 
 ## Quick Install
 

@@ -21,6 +21,7 @@
 | `volcengine-tosutil` | 管理火山引擎 TOS 对象存储资源 |
 | `volcengine-vefaas` | 部署与管理火山引擎 veFaaS serverless 应用 |
 | `volcengine-troubleshooting` | 火山引擎故障排查与诊断 |
+| `volcengine-knowledge-search` | 检索火山引擎官方文档并获取全文（产品概念/用法/计费/部署/最佳实践/服务条款等） |
 
 ## 快速安装
 
