@@ -148,21 +148,28 @@ chmod +x /opt/$repo_name/server"
 
 ### Cloud Assistant Pattern B — large files via TOS pre-signed URL
 
-`ve tos` is not available in all Volcengine CLI builds. If `tosutil` is installed and configured, upload the artifact with `tosutil`, generate a short-lived pre-signed download URL, then have the instance pull it via `wget`. If `tosutil` is unavailable, use SSH/scp when SSH is open, or ask the user for an existing HTTPS artifact URL.
+`ve tos` is not available in all Volcengine CLI builds. If `tosutil` is installed and configured, upload the artifact with `tosutil`, generate a short-lived pre-signed download URL, then have the instance pull it with bounded HTTP retries. If `tosutil` is unavailable, use SSH/scp when SSH is open, or ask the user for an existing HTTPS artifact URL.
 
 ```bash
 # 1. Upload to TOS (bucket created or provided before this step)
 tosutil cp dist/app.tar.gz "tos://$deploy_bucket/artifacts/$repo_name-$git_sha.tar.gz"
 
 # 2. Pre-signed url (15 minute validity)
-url=$(tosutil presign "tos://$deploy_bucket/artifacts/$repo_name-$git_sha.tar.gz" -vp=15min | tail -1)
+url=$(tosutil presign "tos://$deploy_bucket/artifacts/$repo_name-$git_sha.tar.gz" -vp=15min | grep -E '^https://' | head -1)
+[ -n "$url" ] || { echo "tosutil presign did not return an https URL"; exit 1; }
+
+# Optional validation from the agent machine. HEAD can return 403 for a valid
+# presigned object URL; use GET or Range GET instead.
+curl --noproxy '*' -fsS -H 'Range: bytes=0-0' "$url" -o /dev/null
 
 # 3. Pull on the instance
 run_cmd "upload-tos" 600 "mkdir -p /opt/$repo_name && \
-wget -q -O /tmp/app.tar.gz '$url' && \
+curl --http1.1 --retry 5 --retry-all-errors --connect-timeout 10 --max-time 180 -L '$url' -o /tmp/app.tar.gz && \
 tar -xzf /tmp/app.tar.gz -C /opt/$repo_name && \
 rm /tmp/app.tar.gz"
 ```
+
+Only pass the pre-signed URL into the remote command. Do not print it, put it in the resource ledger, include it in the final summary, or write it to README/log files. Reports and ledgers must record the durable `tos://bucket/key` object path instead. For cleanup, delete only the deployment prefix, for example `tosutil rm tos://bucket/prefix/ -r -f`; do not use `-y`.
 
 ### Pre-flight: agent readiness
 Before any `RunCommand`, confirm the Cloud Assistant agent is `Running`:
@@ -191,7 +198,7 @@ For inline EIP creation, `--EipAddress.ChargeType` accepts `PayByBandwidth`, `Pa
 
 ### CLI ECS creation skeleton with inline EIP
 
-This shape was verified in `cn-beijing` with a temporary VPC/subnet/security group, `veLinux 2.0 64 bit`, `ecs.r4i.large`, inline EIP, and Cloud Assistant. Query zone inventory first and substitute the IDs; do not hardcode this instance type outside validation.
+This skeleton shows the command shape for creating an ECS instance with inline EIP and Cloud Assistant. Query current zone inventory, image availability, quotas, and user requirements before choosing the image, zone, and instance type; do not treat previously validated region/spec/image values as defaults.
 
 ```bash
 name="deploy-$repo_name-$git_sha"
@@ -232,6 +239,8 @@ ve ecs RunInstances \
   --EipAddress.BandwidthMbps 1 \
   --EipAddress.ReleaseWithInstance true \
   --Count 1 \
+  --Tags.1.Key "publish-by" \
+  --Tags.1.Value "deploy-skill" \
   --DryRun true
 
 # 2. Create after DryRun passes.
@@ -250,7 +259,9 @@ create_json=$(ve ecs RunInstances \
   --EipAddress.ChargeType PayByBandwidth \
   --EipAddress.BandwidthMbps 1 \
   --EipAddress.ReleaseWithInstance true \
-  --Count 1)
+  --Count 1 \
+  --Tags.1.Key "publish-by" \
+  --Tags.1.Value "deploy-skill")
 instance_id=$(printf '%s' "$create_json" | jq -r '.Result.InstanceIds[0]')
 
 # 3. Poll until RUNNING and capture the EIP.
@@ -274,6 +285,18 @@ done
 
 When `ReleaseWithInstance=true`, do not treat the inline EIP as an independent mandatory cleanup item. Delete the ECS instance first, then confirm the EIP is gone before deleting the security group, subnet, and VPC.
 
+### Public endpoint verification and EIP troubleshooting
+
+Local proxy settings can produce false public-endpoint results. Verify direct public access with:
+
+```bash
+curl --noproxy '*' -v --connect-timeout 5 --max-time 15 "http://$eip:$port/"
+```
+
+When the public URL fails but local health looks good, inspect the path by symptom instead of following a fixed checklist. Useful evidence includes EIP attachment and ENI details, security group ingress for the public port, process listeners (`ss -lntp`), local and private-IP health checks, a direct public check with `curl --noproxy '*'`, active TCP samples during a public request, and service/gateway/reverse-proxy logs.
+
+If TCP reaches the process but app logs show no HTTP request and clients receive zero bytes until timeout, report it as an unresolved public ingress/EIP path issue rather than an application health failure.
+
 ### Docker on veLinux and China networks
 
 veLinux 2 is Debian-like, but `VERSION_CODENAME` may be `lyra`; do not use that value as the Docker official Debian repository codename. Prefer the system package:
@@ -284,7 +307,17 @@ apt-get install -y docker.io
 systemctl enable --now docker
 ```
 
-Docker Hub and GHCR may be slow or unreachable from China regions. Prefer Volcengine CR or a user-provided registry for deployment images. For temporary Docker Hub pulls, test currently available registry-mirror candidates such as `https://docker.1ms.run`, `https://dockerproxy.net`, `https://proxy.vvvv.ee`, and `https://dockerproxy.link`, then keep the first one that successfully pulls the required image. For non-Docker-Hub images, or when a registry mirror fails, inspect the actual pull command from a domestic sync site before using it. `docker.aityp.com` is useful as a search/sync site for some images; open the image detail page and use the exact pull command it provides instead of assuming `docker.aityp.com/<image>` is a universal registry path. DaoCloud `docker.m.daocloud.io` can work for many public/allowlisted images by prefix rewrite; it is not a universal drop-in mirror. If image pulls remain blocked, deploy a release binary with systemd when the project supports it.
+Docker Hub and GHCR may be slow or unreachable from China regions. Prefer Volcengine CR or a user-provided registry for deployment images. If a temporary public-registry mirror or domestic sync service is considered, verify it at execution time with the exact image before relying on it; do not keep stale mirror candidates as defaults. If image pulls remain blocked, fall back to a release binary, local artifact, or TOS artifact before abandoning the ECS path.
+
+### GitHub and artifact transfer fallback
+
+If remote GitHub clone, archive download, Docker Hub, GHCR, or external package download is flaky from the ECS instance, do not keep retrying indefinitely. Prefer bounded retries first; if the remote path remains unreliable, build or package locally and transfer a release artifact. TOS plus a short-lived `tosutil presign` URL is one supported artifact-transfer option; SSH/scp or a user-provided artifact URL can be better when they are already available. Prefer artifact transfer over adding broad package-manager dependencies on the target host.
+
+### veLinux package and Python caveats
+
+Do not assume `python3 -m venv` works on veLinux images. `ensurepip` may be unavailable, and installing `python3-venv`, media packages such as `ffmpeg`, or extra apt repositories can hit package conflicts. For validation workloads, prefer release binaries, reachable container images, local build artifacts uploaded through TOS, or a prebuilt standalone runtime. Install Python packages into the system interpreter only when the user accepts the risk.
+
+When editing app config, prefer structured parsers over string replacement. Parse TOML/YAML/JSON and set the exact key instead of replacing a guessed literal.
 
 ### Long command phases
 
@@ -470,6 +503,10 @@ Every new ECS-side resource must be recorded in `.volcengine/created-resources.j
 
 There is currently no one-command cleanup runner. On failure, print reverse-order cleanup commands from the ledger. The user must review and run the `delete_command` values manually; do not delete automatically without user confirmation.
 
+For a typical CLI-created single-ECS stack, the dependency direction is usually ECS/ENI -> remaining EIP -> custom security group -> subnet -> VPC. TOS artifacts are independent of that VPC chain and are often cleaned last so failure evidence remains available. Treat this as a dependency guide, not a fixed cleanup script: derive actual commands from the ledger and current resource state.
+
+Deletion APIs can return `AsyncTaskId`. Poll until IDs disappear or `TotalCount=0` before moving to the next dependency; otherwise later deletes can fail with `InvalidVpc.InvalidStatus` or `InvalidOperation.Conflict`.
+
 ---
 
 ## 8. Failure paths
@@ -487,3 +524,28 @@ systemctl start $repo_name.service"
 ```
 
 The user runs these manually after reading the failure summary. Auto-rollback is intentionally avoided — the deploy skill surfaces the issue with full context instead of silently masking it.
+
+---
+
+## 9. Gotchas (failure modes, symptom-indexed)
+
+Look up by symptom; act on the mapped cause directly rather than diagnosing unrelated layers first.
+
+| Symptom | Likely cause | Action |
+|---|---|---|
+| `RunInstances` reports instance type unavailable/sold out | type not available in target zone | Query `DescribeAvailableResource`, pick another available type, retry automatically until the candidate list is exhausted |
+| `RunInstances` returns `MissingParameter.PasswordAndKeyPair` | ECS requires `Password` or `KeyPairName` even with SSH closed | Generate a one-time strong `--Password` (or use an existing `--KeyPairName`); never print or persist the generated password |
+| `InvalidEipAddressChargeType.Malformed` | EIP billing value copied from another EIP API | For `RunInstances --EipAddress.ChargeType` use only `PayByBandwidth`, `PayByTraffic`, or `PrePaid` (not `PostPaidByBandwidth`) |
+| SSH connect hangs or is blocked | port 22 closed by design or network policy | Use Cloud Assistant; do not wait on long SSH retries |
+| Cloud Assistant status `jq` returns empty | wrong response path | Read `.Result.Instances[0].Status` and wait for `Running` before `RunCommand` |
+| `RunCommand` looks scheduled but app unchanged | only the scheduling response was checked | Extract invocation ID, poll `DescribeInvocationResults`, check `InvocationResultStatus` + `ExitCode` before continuing |
+| `RunCommand` returns `Success` but app not usable | script exited before real runtime verification | Check unit/container status, listening port (`ss -ltnp`), logs, and one core app behavior; HTTP 200 alone is not acceptance |
+| `RunCommand` returns `InvalidParameter.Timeout` | timeout too low for the API/CLI | Pass `--Timeout 60` minimum (see `volcengine-cli/references/ecs.md`) |
+| Docker Hub/GHCR pull hangs or times out | China-region network / public registry throttling | Prefer CR or user registry; if using a temporary mirror, verify the exact image at execution time; otherwise fall back to binary, local artifact, or TOS artifact |
+| Domestic mirror hostname returns `no basic auth credentials` | the site may be a search/sync frontend, not a drop-in registry path | Inspect the service's current instructions and use the exact `docker pull` command it provides instead of guessing a prefixed image path |
+| `docker login` to CR returns 401 | wrong CR username | Re-read `Result.Username` from `GetAuthorizationToken`; if absent, inspect the CR API response instead of inventing a username |
+| App starts but config-dependent requests fail | `.env` was not generated from required values | Resolve `.env.example`/dependency outputs, inject the `.env`, restart the service |
+| App cannot connect to RDS/Redis | private endpoint or allowlist not wired | Use the private endpoint, build `DATABASE_URL`/`REDIS_URL`, add the ECS subnet CIDR or security group source to the service allowlist |
+| PostgreSQL migrations fail on `public` schema | database owner and schema owner differ | Set the database owner to the app account and use `rdspostgresql ModifySchemaOwner` for `public` before migrations |
+| Shell health check fails with `curl: (23)` | `curl | head` under `set -o pipefail` | Write to a file or use `curl -o /dev/null`; avoid piping curl to early-closing consumers |
+| veFaaS setup fails | `vefaas` CLI/auth/framework issue | Return to the main deploy flow, summarize the failure, let the user retry veFaaS or switch to ECS/VKE |

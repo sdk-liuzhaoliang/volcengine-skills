@@ -35,9 +35,9 @@ Check tools after the user chooses a path:
 If the user has not chosen a mode, run `volcengine-prepare` inline or ask for these decisions:
 
 ```text
-1. 部署方式：ECS / VKE / veFaaS（记录为 `ecs` / `vke` / `vefaas`）
-2. 资源策略：新建独立项目 deploy-<repo>，或复用已有资源
-3. 资源管理：CLI 资源账本 / Terraform IaC（记录为 `cli` / `iac`）
+1. Deployment mode: ECS / VKE / veFaaS (recorded as `ecs` / `vke` / `vefaas`)
+2. Resource strategy: new isolated project deploy-<repo>, or reuse existing resources
+3. Resource management: CLI resource ledger / Terraform IaC (recorded as `cli` / `iac`)
 ```
 
 Persistent local state lives under `.volcengine/` in the repo root:
@@ -90,7 +90,9 @@ Choice file shape:
   "region": "cn-beijing",
   "mode": "ecs",
   "port": 8080,
-  "dependencies": ["redis"],
+  "dependencies": ["postgresql", "redis"],
+  "database_product": "aidap",
+  "database_engine": "supabase",
   "resource_strategy": "create-isolated-project",
   "project": "deploy-my-app",
   "infra_management": "cli"
@@ -153,7 +155,7 @@ Before provisioning, confirm one resource management path with the user:
 These are recommendations, not defaults. If `.volcengine/deploy-choice.json` lacks `infra_management`, ask before creating resources:
 
 ```text
-资源管理建议：<cli|iac>，原因：<short reason>。确认用 CLI 资源账本还是 Terraform/IaC？（`cli` / `iac`）
+Resource management recommendation: <cli|iac>, reason: <short reason>. Confirm the CLI resource ledger or Terraform/IaC? (`cli` / `iac`)
 ```
 
 When using IaC:
@@ -183,7 +185,8 @@ Before starting ECS services or applying Kubernetes manifests, resolve runtime c
 
 Managed dependency wiring must be completed before health checks:
 
-- MySQL/PostgreSQL: create or reuse the instance, database, and app account; use the private endpoint; build `DATABASE_URL`; add the ECS/VKE subnet CIDR or security group source to the database allowlist; run migrations explicitly when `migration_paths` is non-empty.
+- RDS database (`database_product=rds`, engine `mysql` / `postgresql` / `sqlserver`): create or reuse the instance, database, and app account; use the private endpoint; build `DATABASE_URL`; add the ECS/VKE subnet CIDR or security group source to the database allowlist; run migrations explicitly when `migration_paths` is non-empty.
+- AIDAP database (`database_product=aidap`, engine `supabase` / `postgresql`): call `volcengine-supabase` to create or reuse the workspace, branch, app DB account/database, and return database/AIDAP env values before app health checks.
 - Redis: create or reuse the instance and app account/password; use the private endpoint; build `REDIS_URL`; add the ECS/VKE subnet CIDR or security group source to the Redis allowlist.
 - If the user declines managed services for a detected dependency, state the persistence/scaling tradeoff and wire the chosen alternative into the same env/Secret path.
 
@@ -206,73 +209,18 @@ esac
 
 ECS is the default lightweight VM path. Public services must get an EIP so the user can access the service after deployment.
 
-Packaging selection:
+Select packaging from the repo shape: compose file -> compose on ECS; Dockerfile -> Docker on ECS; clear binary or single process -> binary + systemd; otherwise ask one focused start-command question.
 
-| Signal | Packaging |
-|---|---|
-| `compose.yaml` / `compose.yml` / `docker-compose.yml` / `docker-compose.yaml` | Docker compose on ECS |
-| Dockerfile exists | Docker on ECS |
-| compiled binary or clear single process | binary + systemd |
-| unclear start command | ask one follow-up |
+Keep these hard boundaries in the main context:
 
-Provisioning:
+- Use IaC outputs when `infra_management=iac`; otherwise use the CLI ledger path and record every CLI-created resource immediately.
+- Do not hardcode instance type or OS image. Query availability and avoid fuzzy image matches that return GPU, WebUI, marketplace, or unrelated images.
+- If SSH 22 is not explicitly approved, keep it closed and use Cloud Assistant. If SSH is approved, restrict it to the current outbound IP when possible.
+- Volcengine RunCommand is asynchronous. Poll invocation results before treating the command as successful.
+- Generated one-time ECS passwords must not be printed or written to ledger/state.
+- Validate listening port, local health/root path, public endpoint, logs, and one core app behavior where possible.
 
-1. Use IaC-created VPC/subnet/security group/EIP/ECS outputs when `infra_management=iac`.
-2. Reuse a user-specified instance, or find one tagged for this project.
-3. Otherwise, in the CLI fast path, create a new ECS instance with an EIP, security group, system disk, and Cloud Assistant installed.
-4. Do not hardcode one instance type. Query available resources in the target zone and pick a small general-purpose type that is actually available.
-5. If `RunInstances` still reports the selected type unavailable or sold out, automatically try the next available candidate before failing.
-6. Use a known-good public OS image query strategy; avoid fuzzy searches that return GPU, WebUI, marketplace, or unrelated images.
-7. `RunInstances` requires a login credential even when SSH is closed. Provide a generated one-time strong `--Password` or an existing `--KeyPairName`; do not print or write generated passwords to ledger/state.
-8. Record ECS, EIP, security group, and rule resources in the ledger only for CLI-created resources.
-
-Security group:
-
-- Open the application port for public access.
-- Ask whether to open SSH 22. If the user declines, do not open 22 and use Cloud Assistant.
-- If the user opens 22, detect the current outbound IP immediately before writing the rule and restrict SSH to that CIDR when possible. Re-check before deploy if there was a delay; update the rule if the IP changed.
-
-Command channel:
-
-1. If SSH is allowed and reachable, SSH may be used for upload/deploy/debug.
-2. If SSH is not allowed, blocked, or slow to connect, use Cloud Assistant.
-3. Always ensure Cloud Assistant is available for fallback when creating a new instance.
-
-RunCommand caveat:
-
-Volcengine RunCommand is asynchronous. Do not treat the scheduling response as command success. Read the invocation ID, then poll invocation results until success/failure before continuing.
-
-Deployment:
-
-- `binary-systemd`: build or package the app, upload, generate systemd unit, start service.
-- `ecs-docker`: install/start Docker if needed, run the image with restart policy.
-- `ecs-compose`: run the compose file with the compose command available on the target host, and explain volume persistence for stateful services such as Redis.
-
-Docker image pulling in China:
-
-1. Prefer Volcengine CR or a user-provided registry for images produced by this deployment.
-2. For public Docker Hub images during temporary validation, test the listed mirror candidates with bounded timeouts and keep the first one that pulls the required image.
-3. For public images outside Docker Hub, or when a registry mirror fails, inspect the exact pull command from a domestic mirror/sync site instead of assuming the site hostname is a universal registry path.
-4. If public registry pulls fail or hang, fall back to release binary + systemd when the project supports it.
-
-Docker build architecture:
-
-- For VKE workloads, build and push images for the node architecture. Default to `linux/amd64` unless cluster/node pool data proves otherwise.
-- On Apple Silicon or other arm64 developer machines, do not trust the local Docker default platform. Use `docker buildx build --platform linux/amd64 ...` or pull/build with `--platform linux/amd64`, then inspect the pushed image architecture before rollout.
-- For ECS Docker, align the image platform with the selected ECS instance architecture.
-
-Data dependencies:
-
-- If dependencies include MySQL/PostgreSQL/Redis, recommend managed RDS/Redis by default. Keep them in the same VPC as ECS/VKE, use private endpoints, and run migrations explicitly.
-- If the project only uses SQLite, do not imply it must migrate to RDS. Warn that SQLite is single-node storage and data is tied to the instance/disk.
-- If the user opts out of managed services, containerized Redis/DB or SQLite is acceptable for quick validation, but state the durability and scaling tradeoff.
-
-Health gate:
-
-- Check that the process listens on the expected port with `ss -ltnp` before diagnosing security groups or EIP.
-- Check `http://localhost:<port><health_path>` when a health path is known. If no health path is detected, use TCP/listening checks and root-path smoke checks instead of assuming `/health`.
-- Check public `http://<EIP>:<port>` from outside after the security group is open.
-- On failure, print logs and reverse-order cleanup commands from the ledger.
+Read [`references/ecs-deploy-steps.md`](./references/ecs-deploy-steps.md) for the detailed ECS packaging, upload, Cloud Assistant, Docker mirror, architecture, health-gate, and cleanup workflow.
 
 ---
 
@@ -301,28 +249,35 @@ If the `volcengine-vefaas` skill fails, return to this main deployment flow. Sum
 
 Recommend `volcengine-iac` for VKE resource provisioning because cluster, node pool, CR, LB, and managed dependencies benefit from plan/diff/destroy safety. Use `ve` CLI plus the resource ledger when the user chooses CLI after seeing the tradeoff, for temporary validation, explicit user preference, or IaC fallback.
 
-Required after choosing VKE:
+After choosing VKE, check `docker`, `kubectl`, `ve`, and `terraform`/`jq` if using IaC. Build for the node architecture, defaulting to `linux/amd64` unless cluster data proves otherwise; inspect the pushed image platform before rollout.
 
-- `docker` for image build
-- `kubectl` for Kubernetes apply/rollout
-- `terraform`/`jq` for IaC resource provisioning unless using CLI fast path
-- `ve` for CLI fallback, CR authentication, and read-only diagnostics
+Keep this ordered execution skeleton — these actions must be chained in sequence, and a later step run before an earlier one converges is the most common VKE failure:
 
-Flow:
+1. Provision or reuse VKE + CR (IaC outputs or CLI fast path).
+2. Wait for the cluster to be `Running`, then fetch the kubeconfig (from IaC outputs or `CreateKubeconfig`).
+3. Verify addons: `core-dns` present; prefer `cr-credential-controller` for private CR pulls.
+4. Build the image for the node architecture.
+5. Authenticate to CR, push the image, and inspect the pushed platform.
+6. Resolve env/Secret values and dependency outputs.
+7. Generate manifests from resolved values.
+8. Run migrations as a Kubernetes Job when migration paths exist.
+9. Apply, then wait for rollout and the LoadBalancer/EIP.
+10. Verify the public endpoint and one core app behavior.
 
-1. Generate or use Dockerfile.
-2. Build and smoke-test the image locally with a platform matching the VKE node architecture; default to `linux/amd64`.
-3. Use IaC outputs for VPC/subnets/security group/VKE/CR when available; otherwise create or reuse them through CLI fast path and record resources.
-4. Authenticate to CR using CR authorization token.
-5. Fetch kubeconfig after cluster is running, or read it from `.volcengine/iac-outputs.json`.
-6. Before applying workloads, confirm VKE addons: `core-dns` must be present for in-cluster service discovery/DNS, and `cr-credential-controller` should be present when pulling private Volcengine CR images without managing registry passwords in app manifests.
-7. Push image to CR and inspect the pushed image platform before rollout.
-8. Generate Kubernetes manifests with resolved ConfigMap/Secret values and health probes matched to the app.
-9. Run migrations as a Kubernetes Job when migration paths exist.
-10. Wait for rollout and public LoadBalancer/EIP.
-11. Verify the public endpoint.
+Keep these hard boundaries in the main context:
+
+- Use IaC outputs for VPC/subnets/security group/VKE/CR when available; otherwise create or reuse through the CLI fast path and record resources.
+- `CreateKubeconfig` before the cluster is `Running` returns `OperationDenied` — poll to `Running` first.
+- Confirm `core-dns` before relying on in-cluster DNS.
+- Prefer `cr-credential-controller` for private Volcengine CR image pulls instead of storing registry passwords in app manifests.
+- Re-read `Result.Username` from `GetAuthorizationToken` for `docker login`; never invent a fallback username.
+- Resolve ConfigMap/Secret values before applying workloads; never leave placeholders in applied Secret manifests.
+- Run migrations as a Kubernetes Job when migration paths exist.
+- Wait for rollout and LoadBalancer/EIP, then verify the public endpoint.
 
 For managed dependencies, prefer managed Volcengine services when practical; otherwise state clearly when the plan is deploying stateful containers inside VKE.
+
+Read [`references/vke-deploy-steps.md`](./references/vke-deploy-steps.md) for the full VKE pipeline (cluster wait, kubeconfig, addon checks, CR auth/push, rollout, endpoint verify), with [`references/k8s-manifests.md`](./references/k8s-manifests.md) for manifest templates and [`references/dockerfile-templates.md`](./references/dockerfile-templates.md) for image build templates.
 
 ---
 
@@ -355,6 +310,7 @@ Do not add custom domain, HTTPS, dashboards, or cost cards unless the user asks;
 Use these references only when executing the corresponding path:
 
 - ECS build/systemd/upload details: [`references/ecs-deploy-steps.md`](./references/ecs-deploy-steps.md)
+- VKE deploy pipeline (cluster/kubeconfig/addons/CR/rollout): [`references/vke-deploy-steps.md`](./references/vke-deploy-steps.md)
 - veFaaS deploy handoff details: [`references/faas-deploy-steps.md`](./references/faas-deploy-steps.md)
 - Dockerfile templates: [`references/dockerfile-templates.md`](./references/dockerfile-templates.md)
 - Kubernetes manifests: [`references/k8s-manifests.md`](./references/k8s-manifests.md)
@@ -364,25 +320,11 @@ Use these references only when executing the corresponding path:
 
 ## 11. Common failure modes
 
-| Symptom | Likely cause | Action |
-|---|---|
-| ECS instance type creation fails | type not available in zone | Query `DescribeAvailableResource` and pick another available type. |
-| SSH blocked | port 22 closed or network policy | Use Cloud Assistant; do not wait on long SSH retries. |
-| RunCommand appears successful but app not changed | only scheduling result was checked | Poll invocation results before continuing. |
-| RunCommand `Success` but app is not usable | script exited successfully before real runtime verification | Check unit/container status, listening port, logs, and one core app behavior; HTTP 200 alone is not acceptance. |
-| `RunInstances` returns `MissingParameter.PasswordAndKeyPair` | ECS requires `Password` or `KeyPairName` even with SSH closed | Generate a one-time strong password or use an existing key pair; do not print generated credentials. |
-| `InvalidEipAddressChargeType.Malformed` | Used EIP billing value from another API | For `RunInstances --EipAddress.ChargeType`, use `PayByBandwidth`, `PayByTraffic`, or `PrePaid`. |
-| Cloud Assistant status jq returns empty | Wrong response path | Use `.Result.Instances[0].Status`; wait for `Running`. |
-| Docker Hub/GHCR pull hangs or times out | China network or public registry throttling | Prefer CR/user registry; for Docker Hub test `docker.1ms.run`, `dockerproxy.net`, `proxy.vvvv.ee`, or `dockerproxy.link`; for sync/search sites such as `docker.aityp.com`, inspect the image detail page and use the exact pull command; fall back to binary/systemd when possible. |
-| Domestic mirror hostname returns `no basic auth credentials` | The site may be a search/sync frontend, not a drop-in registry path for every image | Open/parse the image detail page and use the exact "国内镜像" / `docker pull` command it provides. |
-| `docker login` returns 401 | wrong CR username | Re-read `Result.Username` from `GetAuthorizationToken`; if it is missing, inspect the CR API response instead of inventing a fallback username. |
-| app starts but config-dependent requests fail | `.env` or Kubernetes Secret was not generated from required values | Resolve `.env.example`/dependency outputs, inject ECS `.env` or K8s Secret, then restart/roll out. |
-| app cannot connect to RDS/Redis | private endpoint or allowlist not wired | Use private endpoint, build `DATABASE_URL`/`REDIS_URL`, and add ECS/VKE subnet CIDR or security group source to the service allowlist. |
-| PostgreSQL migrations fail on `public` schema | database owner and schema owner differ | Set database owner to the app account and use `rdspostgresql ModifySchemaOwner` for `public` before migrations. |
-| Shell health check fails with `curl: (23)` | `curl | head` under `set -o pipefail` | Avoid piping curl to early-closing consumers; write to a file or use `curl -o /dev/null`. |
-| container fails with `exec format error` | image architecture does not match VKE/ECS node architecture | Rebuild/pull/push with the node platform, usually `linux/amd64`, and inspect the image before rollout. |
-| `BLB no available backend` | Pod readinessProbe failing, often because `/health` does not exist | Use a detected health path or switch probes to `tcpSocket`; inspect with `kubectl describe pod` and `kubectl logs`. |
-| `CreateKubeconfig` returns `OperationDenied` | cluster not yet `Running` | Poll `DescribeClusters` until phase=Running first |
-| `RunCommand` returns `InvalidParameter.Timeout` | timeout too low for the current API/CLI | Pass `--Timeout 60` minimum (see `volcengine-cli/references/ecs.md`) |
-| veFaaS setup fails | `vefaas` CLI/auth/framework issue | Return to the main deploy flow, summarize the failure, and let the user retry veFaaS or switch to ECS/VKE. |
-| K8s `LoadBalancer` stuck in `<pending>` | CLB subnet annotation missing | Add `service.beta.kubernetes.io/volcengine-loadbalancer-subnet-id` to Service annotations |
+Common gotchas are intentionally kept as references so the main skill stays adaptive:
+
+- ECS instance/image/Cloud Assistant/SSH/Docker mirror issues: [`references/ecs-deploy-steps.md`](./references/ecs-deploy-steps.md)
+- Container architecture and Dockerfile pitfalls: [`references/dockerfile-templates.md`](./references/dockerfile-templates.md)
+- VKE pipeline sequencing (kubeconfig/addons/CR auth/rollout): [`references/vke-deploy-steps.md`](./references/vke-deploy-steps.md)
+- Kubernetes readiness, LoadBalancer, probes, and manifest issues: [`references/k8s-manifests.md`](./references/k8s-manifests.md)
+- Managed dependency wiring and migrations: [`references/supported-dependencies.md`](./references/supported-dependencies.md)
+- veFaaS CLI/auth/framework setup: [`references/faas-deploy-steps.md`](./references/faas-deploy-steps.md) and `volcengine-vefaas`

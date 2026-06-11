@@ -1,6 +1,6 @@
-# Kubernetes 部署清单模板
+# Kubernetes manifest templates
 
-生成 K8s manifests 时必须包含以下最佳实践。默认把 YAML 文件放在 `.volcengine/k8s/` 目录下；远程 Git URL 的临时 clone 可以先使用 `/tmp`，但最终状态和可复用文件应落在仓库的 `.volcengine/` 下。
+Generated K8s manifests must include the following best practices. By default, place YAML files under `.volcengine/k8s/`; a temporary clone of a remote Git URL may use `/tmp` first, but final state and reusable files should land under the repo's `.volcengine/`.
 
 ---
 
@@ -31,7 +31,7 @@ metadata:
   name: <repo-name>-config
   namespace: <repo-name>
 data:
-  # 非敏感配置
+  # Non-sensitive config
   NODE_ENV: "production"
   PORT: "<port>"
   LOG_LEVEL: "info"
@@ -43,7 +43,7 @@ metadata:
   namespace: <repo-name>
 type: Opaque
 stringData:
-  # 敏感配置（数据库连接等）；生成时替换为真实值，禁止保留占位符
+  # Sensitive config (DB connections, etc.); replace with real values at generation time, never leave placeholders
   DATABASE_URL: "<resolved-database-url>"
   REDIS_URL: "<resolved-redis-url>"
 ```
@@ -85,7 +85,7 @@ spec:
       labels:
         app: <repo-name>
     spec:
-      # 反亲和：分散到不同节点
+      # Anti-affinity: spread across different nodes
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -98,12 +98,12 @@ spec:
                   values:
                   - <repo-name>
               topologyKey: kubernetes.io/hostname
-      # 优雅终止
+      # Graceful termination
       terminationGracePeriodSeconds: 30
-      # VKE 节点通常为 linux/amd64；构建/推送镜像时必须与节点架构一致
+      # VKE nodes are usually linux/amd64; the built/pushed image must match the node architecture
       nodeSelector:
         kubernetes.io/arch: amd64
-      # CR 免密拉取依赖 VKE 插件 cr-credential-controller；不要把 CR 密码写入业务 Secret
+      # Password-free CR pulls rely on the VKE addon cr-credential-controller; do not put CR passwords in app Secrets
       imagePullSecrets:
       - name: volcengine-cr-credential
       containers:
@@ -113,13 +113,13 @@ spec:
         - containerPort: <port>
           name: http
           protocol: TCP
-        # 环境变量
+        # Environment variables
         envFrom:
         - configMapRef:
             name: <repo-name>-config
         - secretRef:
             name: <repo-name>-secret
-        # 资源限制
+        # Resource limits
         resources:
           requests:
             cpu: 100m
@@ -127,7 +127,7 @@ spec:
           limits:
             cpu: "1"
             memory: 512Mi
-        # 存活探针：容器是否还活着；仅在确认应用提供 health path 时使用 httpGet
+        # Liveness probe: is the container still alive; only use httpGet once the app is confirmed to expose a health path
         livenessProbe:
           httpGet:
             path: <health-path>
@@ -136,7 +136,7 @@ spec:
           periodSeconds: 20
           timeoutSeconds: 3
           failureThreshold: 3
-        # 就绪探针：是否可以接收流量；如果没有 HTTP health path，改用下方 tcpSocket 模板
+        # Readiness probe: can it receive traffic; if there is no HTTP health path, use the tcpSocket template below
         readinessProbe:
           httpGet:
             path: <health-path>
@@ -145,7 +145,7 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
-        # 启动探针：慢启动应用（Java 等）
+        # Startup probe: slow-starting apps (Java, etc.)
         startupProbe:
           httpGet:
             path: <health-path>
@@ -153,18 +153,18 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 5
           failureThreshold: 30
-        # 安全上下文
+        # Security context
         securityContext:
           runAsNonRoot: true
           readOnlyRootFilesystem: false
           allowPrivilegeEscalation: false
 ```
 
-> **适配说明**：
-> - 不要默认假设应用有 `/health` 端点；先从代码、Dockerfile HEALTHCHECK、框架默认值或用户输入确定 `health_path`
-> - 如果应用没有 HTTP health path，使用 `tcpSocket` 探针替代 `httpGet`
-> - Java/Spring Boot 应用 `startupProbe.failureThreshold` 可能需要增大（启动慢）
-> - 资源 limits 根据应用类型调整（Java 通常需要更多内存）
+> **Adaptation notes**:
+> - Do not assume the app has a `/health` endpoint by default; determine `health_path` from code, the Dockerfile HEALTHCHECK, framework defaults, or user input first
+> - If the app has no HTTP health path, use a `tcpSocket` probe instead of `httpGet`
+> - Java/Spring Boot apps may need a larger `startupProbe.failureThreshold` (slow startup)
+> - Adjust resource limits to the app type (Java usually needs more memory)
 
 TCP probe fallback:
 
@@ -200,7 +200,7 @@ metadata:
   labels:
     app: <repo-name>
   annotations:
-    # 火山引擎 CLB 注解
+    # Volcengine CLB annotations
     service.beta.kubernetes.io/volcengine-loadbalancer-subnet-id: "<subnet-id>"
     service.beta.kubernetes.io/volcengine-loadbalancer-address-type: "PUBLIC"
 spec:
@@ -214,14 +214,14 @@ spec:
     protocol: TCP
 ```
 
-> **说明**：
-> - `LoadBalancer` 类型会自动创建火山引擎 CLB
-> - 需要指定 subnet-id 注解，CLB 才能正确创建
-> - 如果不需要公网访问，改为 `ClusterIP` 类型
+> **Notes**:
+> - The `LoadBalancer` type automatically creates a Volcengine CLB
+> - The subnet-id annotation is required for the CLB to be created correctly
+> - If public access is not needed, switch to the `ClusterIP` type
 
 ---
 
-## 5. HPA（水平自动扩缩容）
+## 5. HPA (Horizontal Pod Autoscaler)
 
 ```yaml
 # k8s/04-hpa.yaml
@@ -267,7 +267,7 @@ spec:
 
 ---
 
-## 6. PDB（Pod Disruption Budget）
+## 6. PDB (Pod Disruption Budget)
 
 ```yaml
 # k8s/05-pdb.yaml
@@ -285,7 +285,7 @@ spec:
 
 ---
 
-## 7. NetworkPolicy（可选，推荐）
+## 7. NetworkPolicy (optional, recommended)
 
 ```yaml
 # k8s/06-network-policy.yaml
@@ -302,19 +302,19 @@ spec:
   - Ingress
   - Egress
   ingress:
-  # 仅允许来自 CLB 的入站流量
+  # Allow inbound traffic only from the CLB
   - ports:
     - port: <port>
       protocol: TCP
   egress:
-  # 允许 DNS 解析
+  # Allow DNS resolution
   - to: []
     ports:
     - port: 53
       protocol: UDP
     - port: 53
       protocol: TCP
-  # 允许访问数据库等内网服务
+  # Allow access to internal services such as databases
   - to:
     - ipBlock:
         cidr: 172.16.0.0/16
@@ -322,9 +322,9 @@ spec:
 
 ---
 
-## 文件组织
+## File organization
 
-生成的 K8s 清单按编号排序，确保按顺序 apply：
+Generated K8s manifests are numbered to ensure they apply in order:
 
 ```text
 k8s/
@@ -334,10 +334,25 @@ k8s/
 ├── 03-service.yaml
 ├── 04-hpa.yaml
 ├── 05-pdb.yaml
-└── 06-network-policy.yaml    # 可选
+└── 06-network-policy.yaml    # optional
 ```
 
-一键部署：
+One-shot deploy:
 ```bash
 kubectl apply -f .volcengine/k8s/
 ```
+
+---
+
+## Gotchas (common VKE deployment failure modes)
+
+Look up by symptom; act on the mapped cause directly rather than suspecting unrelated layers first.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `CreateKubeconfig` returns `OperationDenied` | cluster not yet `Running` | Poll `ListClusters` until `Status.Phase=Running` before fetching the kubeconfig |
+| `Service` `LoadBalancer` stuck at `<pending>` | missing CLB subnet annotation | Add `service.beta.kubernetes.io/volcengine-loadbalancer-subnet-id` to the Service |
+| `BLB no available backend` / no available backend nodes | Pod readinessProbe failing, often because the probed `/health` path does not exist | Use the actual detected health path, or switch the probe to `tcpSocket`; diagnose with `kubectl describe pod` + `kubectl logs` |
+| Container exits immediately with `exec format error` | image architecture does not match the VKE node architecture | Rebuild/pull/push with the node architecture (usually `linux/amd64`) and inspect the image platform before rollout (see [`dockerfile-templates.md`](./dockerfile-templates.md)) |
+| App is up but all config-dependent requests fail | ConfigMap/Secret was not generated from real values and left placeholders | Resolve `.env.example`/dependency outputs, regenerate the Secret, then rollout again; **never** apply placeholders into a Secret |
+| Private CR image pull fails with `no basic auth` / `ImagePullBackOff` | `cr-credential-controller` not installed, or wrong registry credentials hardcoded in the manifest | Prefer `cr-credential-controller` for private CR pulls instead of putting registry passwords in the app manifest |

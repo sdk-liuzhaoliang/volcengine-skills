@@ -37,12 +37,14 @@ Analyze a repo, explain viable Volcengine deployment paths, and decide the resou
 Default flow:
 
 1. Resolve the repo from a local path or Git URL.
-2. Run the analyzer to identify language, framework, port, Docker/compose shape, dependencies, migrations, and entrypoint.
+2. Run the analyzer to identify language, framework, port, Docker/compose shape, dependencies, migrations, entrypoint, and the deployable service surface.
 3. Optionally verify the current Volcengine identity and region when credentials are available.
-4. Present a ranked list of ECS / VKE / veFaaS. Never hide a path; explain why each path is attractive or costly. Use `ecs | vke | vefaas` as machine-readable mode values.
+4. Present a ranked list of ECS / VKE / veFaaS only after a deployable service surface is clear. Include every materially viable path; explain why each path is attractive or costly. Use `ecs | vke | vefaas` as machine-readable mode values.
 5. Recommend a resource management path, but ask the user to choose `cli` or `iac`. Recommend IaC for VKE, managed dependencies, team-managed infrastructure, or plan/diff/destroy requirements; recommend CLI for pure ECS single-VM deployments, temporary validation, missing Terraform, blocked provider registry access, or explicit CLI preference.
 6. Ask only for product/lifecycle ambiguity, resource reuse, and the resource management choice. If the user says "you decide", use the first ranked runtime path, the recommended resource management path from these rules, and new isolated resources.
 7. Persist only minimal state in `.volcengine/` when the work will continue across steps.
+
+Before ranking ECS / VKE / veFaaS, identify the concrete deploy target: the repo, subdirectory, command, artifact, static output, or existing cloud app/function that a path can actually run, containerize, expose, or serve. File-level signals are evidence, not conclusions. A Dockerfile, compose file, `package.json`, framework dependency, or `build`/`dev`/`test` script does not by itself prove the repo is deployable.
 
 Do not run strict tool dependency checks during recommendation. Check path-specific tools only after the user chooses a path.
 
@@ -93,6 +95,7 @@ Show the important findings in plain language:
 Project: <repo_name> @ <git_sha>
 Runtime: <language> / <framework>
 Deployable subdir: <deploy_subdir or repo root>
+Deployable surface: <web service | rpc service | http api | static/html site | full-stack app | user-specified service | unclear>
 Entrypoint: <entrypoint>
 Port: <port>
 Packaging signals: Dockerfile=<yes/no>, compose=<yes/no if detected>
@@ -100,7 +103,18 @@ Dependencies: <mysql, redis, ...>
 Migrations: <paths or none>
 ```
 
-If the analyzer cannot identify a runnable project, ask what runtime or subdirectory to deploy before recommending a path. A documentation HTML file alone is not a deployable app signal.
+If the analyzer cannot identify a concrete ECS/VKE/veFaaS deploy target, ask what subdirectory, service, command, artifact, static output, or existing veFaaS app/function should be deployed before recommending a path. Downgrade to confirmation instead of a strong recommendation when the repo appears to be primarily build tooling, packaging, examples, docs, or reusable code rather than an application surface.
+
+A deploy target is something that can be run, containerized, exposed, or served by ECS, VKE, or veFaaS. Useful evidence includes, but is not limited to:
+
+- a long-running process with a start command,
+- a listening port or RPC/API/HTTP route,
+- a static/HTML site entry or build output intended for serving,
+- a health check or smoke endpoint,
+- frontend and backend/API pieces with a clear service boundary,
+- an explicit user instruction naming the service, subdirectory, command, artifact, or runtime target.
+
+Do not infer deployability from a Dockerfile, package scripts, or build tooling alone.
 
 ---
 
@@ -126,31 +140,31 @@ Surface permission or region notes in the corresponding option; do not hide that
 Prechecks are advisory, not gates. If you can cheaply check quotas or permissions, present the result as a risk:
 
 ```text
-检测到 <quota/permission> 可能不足，继续可能在创建资源时失败。仍要继续吗？
+<quota/permission> may be insufficient; continuing could fail when creating resources. Proceed anyway?
 ```
 
 If account real-name verification or balance cannot be queried reliably, give a short reminder instead of inventing a check:
 
 ```text
-创建云资源可能要求账号已实名且余额/授信充足；如果创建失败，需要先在控制台处理账号状态。
+Creating cloud resources may require a real-name-verified account with sufficient balance/credit; if creation fails, resolve the account status in the console first.
 ```
 
 ---
 
 ## 3. Recommend deployment paths
 
-Use [`references/deploy-mode-heuristics.md`](./references/deploy-mode-heuristics.md) for the detailed decision rules. Present a ranked list, not `recommended=true/false` flags or scoring internals.
+Use [`references/deploy-mode-heuristics.md`](./references/deploy-mode-heuristics.md) for the detailed decision rules. Present a ranked list, not `recommended=true/false` flags or scoring internals. If the deployable surface is unclear, present the ambiguity first and ask the smallest follow-up question before ranking.
 
-Always include all three options:
+Include every materially viable option; do not force a full ECS / VKE / veFaaS comparison when the repo or user request clearly rules a path out. Mention a non-viable path only when its exclusion helps the user decide.
 
-- **ECS**: VM with EIP. Package as binary + systemd, Docker, or compose. Good for simple services, fast public access, and cases where the user wants fewer local/cloud dependencies.
-- **VKE**: Container/Kubernetes path. Good for Dockerfile/compose projects, multi-service workloads, rolling updates, HPA, and longer-term production shape.
-- **veFaaS**: Serverless path. Good for supported web frameworks and stateless workloads. If the user chooses it, switch to/call the `volcengine-vefaas` skill for deployment; if that fails, return to the main flow so the user can retry or choose ECS/VKE.
+- **ECS**: VM path. Best for targets that can run on a Linux VM, such as Web/API/RPC services, full-stack apps, static-site serving processes, binaries, Docker/compose apps, workers, scheduled commands, or apps needing OS/network/disk/debugging control.
+- **VKE**: Container/Kubernetes path. Best for containerized or Kubernetes-shaped targets, such as multi-service apps, Web/API/RPC containers, workers, Jobs/CronJobs, rolling updates, replicas, HPA, Ingress/Service, GPU workloads, or production container operations.
+- **veFaaS**: Serverless path. Best only when the target fits the `volcengine-vefaas` skill workflow: supported Web/API or frontend/static frameworks, or an existing veFaaS app/function. Prefer ECS/VKE for long-running workers, multi-service orchestration, complex migrations, unsupported event/task/trigger creation, custom system dependencies, or no available API Gateway. If the user chooses it, switch to/call the `volcengine-vefaas` skill for deployment; if that fails, return to the main flow so the user can retry or choose ECS/VKE.
 
 Include:
 
 - why it is ranked where it is
-- rough cost level (`低`, `中`, `中-高`)
+- rough cost level (`low`, `medium`, `medium-high`)
 - operational tradeoffs
 - known blockers or setup needed if the user chooses it
 - resource management recommendation (`iac` or `cli`) and why
@@ -158,9 +172,9 @@ Include:
 Do not check every tool before the user chooses. Phrase setup needs as decision guidance:
 
 ```text
-资源管理需要用户确认：VKE、托管数据库/缓存/存储/LB/域名/证书或团队长期资源推荐 Terraform/volcenginecc；纯 ECS 单机、临时验证、无 Terraform 或 provider registry 不通时推荐 ve CLI 快速创建并记录资源账本。
-选择 VKE 后会检查 kubectl；如果用户选择 IaC，也会检查 terraform/provider 可用性。
-选择 veFaaS 后会切换/调用 `volcengine-vefaas` skill 检查 vefaas CLI、登录状态和框架识别；失败时回到这里，用户可修复后重试或改选 ECS/VKE。
+Resource management needs user confirmation: recommend Terraform/volcenginecc for VKE, managed database/cache/storage/LB/domain/certificate, or long-lived team resources; recommend the ve CLI fast path (record a resource ledger) for plain single-VM ECS, temporary validation, or when Terraform / the provider registry is unavailable.
+Choosing VKE will check kubectl; if you choose IaC it will also check terraform/provider availability.
+Choosing veFaaS switches to / calls the `volcengine-vefaas` skill to check the vefaas CLI, login status, and framework detection; on failure it returns here so you can fix it and retry, or switch to ECS/VKE.
 ```
 
 ---
@@ -170,21 +184,25 @@ Do not check every tool before the user chooses. Phrase setup needs as decision 
 After showing the ranked list, ask only what cannot be safely inferred:
 
 ```text
-1. 部署方式：默认使用推荐第一项。可选 ECS / VKE / veFaaS（记录为 `ecs` / `vke` / `vefaas`）。
-2. 资源策略：默认新建独立项目 deploy-<repo> 并创建新资源；也可以复用已有资源。
-3. 资源管理：推荐 <cli|iac>，请确认使用 CLI 资源账本还是 Terraform/IaC。
+1. Deployment mode: defaults to the top-ranked option. Choose ECS / VKE / veFaaS (recorded as `ecs` / `vke` / `vefaas`).
+2. Resource strategy: defaults to a new isolated project deploy-<repo> with new resources; you may also reuse existing resources.
+3. Database product/engine, only when a managed database is detected or requested: choose `rds/mysql`, `rds/postgresql`, `rds/sqlserver`, `aidap/supabase`, or `aidap/postgresql`.
+4. Resource management: recommend <cli|iac>; confirm whether to use the CLI resource ledger or Terraform/IaC.
 ```
+
+For MySQL dependencies, use `database_product=rds` and `database_engine=mysql` unless the user rejects managed RDS. For SQL Server dependencies, use `database_product=rds` and `database_engine=sqlserver`. For PostgreSQL dependencies, ask only when the product is ambiguous: RDS PostgreSQL, AIDAP PostgreSQL, and AIDAP Supabase are different choices.
 
 Ask whether to use Terraform/IaC explicitly. Give a recommendation, but do not turn it into a default:
 
 ```text
-资源管理建议：VKE、托管依赖、团队长期资源或需要 plan/diff/destroy 时选 Terraform/volcenginecc；纯 ECS 单机、临时 demo、无 Terraform 或 provider registry 不通时选 ve CLI 快速创建并记录资源账本。请确认用 `iac` 还是 `cli`。
+Resource management recommendation: choose Terraform/volcenginecc for VKE, managed dependencies, long-lived team resources, or when you need plan/diff/destroy; choose the ve CLI fast path (record a resource ledger) for plain single-VM ECS, a temporary demo, or when Terraform / the provider registry is unavailable. Confirm `iac` or `cli`.
 ```
 
 If the user says "you decide", use:
 
 - deployment mode: first ranked option
 - resources: create new isolated Volcengine project `deploy-<repo>`
+- database product/engine: infer exact engines when unambiguous (`mysql` -> `rds/mysql`, `sqlserver` -> `rds/sqlserver`); for PostgreSQL, choose RDS PostgreSQL only when the project has no AIDAP/Supabase signal and the user has not asked for AIDAP/serverless, otherwise ask.
 - resource management: apply the table in [`references/deploy-mode-heuristics.md`](./references/deploy-mode-heuristics.md): plain ECS single-VM without managed dependencies can be `cli`; VKE, managed dependencies, team-owned infrastructure, or plan/diff/destroy needs are `iac`
 
 If the user chooses reuse, ask for only the resource IDs needed by that path. Reused resources must not be destroyed by cleanup.
@@ -204,7 +222,9 @@ If execution continues in the same conversation, no file is required. If the use
   "region": "cn-beijing",
   "mode": "ecs",
   "port": 8080,
-  "dependencies": ["redis"],
+  "dependencies": ["postgresql", "redis"],
+  "database_product": "aidap",
+  "database_engine": "supabase",
   "resource_strategy": "create-isolated-project",
   "project": "deploy-my-app",
   "infra_management": "cli"
@@ -220,19 +240,21 @@ Do not write score tables, rationale arrays, or a full recommendation matrix unl
 ## 6. Summary template
 
 ```text
-项目检测：
-- 运行时：<language>/<framework>
-- 入口/端口：<entrypoint> / <port>
-- 打包信号：Dockerfile=<yes/no>, Compose=<yes/no>
-- 依赖：<deps or none>
-- 迁移：<paths or none>
-- 资源管理建议：<iac|cli>（VKE/托管依赖/团队资源通常建议 iac；纯 ECS 单机或 IaC 不可用通常建议 cli）
+Project detection:
+- Runtime: <language>/<framework>
+- Deployable surface: <surface or unclear, with evidence>
+- Entrypoint/port: <entrypoint> / <port>
+- Packaging signals: Dockerfile=<yes/no>, Compose=<yes/no>
+- Dependencies: <deps or none>
+- Database choice: <none | database_product=rds engine=mysql|postgresql|sqlserver | database_product=aidap engine=supabase|postgresql>
+- Migrations: <paths or none>
+- Resource management recommendation: <iac|cli> (VKE/managed dependencies/team resources usually suggest iac; plain single-VM ECS or unavailable IaC usually suggests cli)
 
-推荐顺序：
+Ranked order:
 1. <mode>
-   原因：...
-   代价：...
-   费用粗估：...
+   Reason: ...
+   Tradeoff: ...
+   Rough cost: ...
 
 2. <mode>
    ...
@@ -240,8 +262,8 @@ Do not write score tables, rationale arrays, or a full recommendation matrix unl
 3. <mode>
    ...
 
-请确认：
-1. 部署方式：默认 <first mode>
-2. 资源策略：默认新建独立项目 deploy-<repo>；也可复用已有资源
-3. 资源管理：建议 <iac|cli>；请确认用 `iac` 还是 `cli`
+Please confirm:
+1. Deployment mode: defaults to <first mode>
+2. Resource strategy: defaults to a new isolated project deploy-<repo>; reuse is also possible
+3. Resource management: recommend <iac|cli>; confirm `iac` or `cli`
 ```

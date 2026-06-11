@@ -24,8 +24,8 @@ user_name="cli-skill-test-user"
 ve iam CreateUser \
   --UserName "$user_name" \
   --Description "cli-skill-test" \
-  --Tags.1.Key "purpose" \
-  --Tags.1.Value "cli-skill-test"
+  --Tags.1.Key "publish-by" \
+  --Tags.1.Value "deploy-skill"
 
 ve iam TagResources \
   --ResourceType "User" \

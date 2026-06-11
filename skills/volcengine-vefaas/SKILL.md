@@ -1,6 +1,7 @@
 ---
 name: volcengine-vefaas
-description: Deploy and manage serverless applications on Volcengine veFaaS. Use when the user wants to deploy web apps, manage functions (pull code, upload and deploy), configure environment variables, or work with veFaaS services.
+description: Deploy and manage serverless applications on Volcengine veFaaS. Use when the user wants to deploy web apps, manage functions (pull code, upload and deploy), configure environment variables, inspect veFaaS projects, troubleshoot vefaas CLI/auth/framework issues, or work with veFaaS services.
+license: MIT
 ---
 
 # volcengine-vefaas: Volcengine FaaS CLI
@@ -71,6 +72,7 @@ Detailed documentation on specific topics:
 - **[Configuration](references/configuration.md)** - Config files and settings
 - **[Environment Variables](references/environment-variables.md)** - Managing env vars
 - **[Framework Detection](references/framework-detection.md)** - Supported frameworks and auto-detection
+- **[MCP Deployment](references/mcp-deployment.md)** - MCP protocol, `run.sh`, proxy, and path-selection checks
 - **[Troubleshooting](references/troubleshooting.md)** - Debug mode, common issues, and solutions
 
 ## Important Notes

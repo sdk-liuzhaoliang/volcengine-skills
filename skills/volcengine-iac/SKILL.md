@@ -27,7 +27,7 @@ metadata:
 
 Generate, plan, and apply Volcengine infrastructure with Terraform when the user chooses IaC. `volcengine-deploy` still owns application packaging, runtime rollout, health checks, and CLI resource-ledger deployment.
 
-When writing new examples, prefer the Cloud Control provider `volcengine/volcenginecc`. Clean no-op verified `volcenginecc` examples now cover network, VPC extras, VPC traffic mirror filters and CLB targets, private NAT, ECS, ECS placement/template extras, EBS snapshots, VKE, CR, TOS including bucket notification to veFaaS, TLS including scheduled SQL and TOS import tasks, CloudMonitor disabled alert rules, Redis, IAM, IAM users/groups, CLB instance/certificate/ACL, ALB full private entry traffic plus health check template/certificate/ACL/customized config, APIG private gateway/service, VPN IPsec gateway/connection/route plus SSL server, CEN with VPC attachment, DirectConnect gateway, TransitRouter, PrivateLink CLB endpoint service and endpoint, veFaaS, RDS MySQL, RDS PostgreSQL, Kafka allowlist, FileNAS, EFS, DNS, and PrivateZone under `assets/examples/`; `volcenginecc-ebs-snapshot-group`, `volcenginecc-autoscaling`, and `volcenginecc-rdsmssql` are lifecycle-verified only and have documented provider drift/destroy caveats. See the matching `references/volcenginecc-*.md` file for validation results and pitfalls. Blocked resources are tracked in [`references/volcenginecc-blocked.md`](./references/volcenginecc-blocked.md). Existing reusable modules under `assets/modules/` still use the legacy `volcengine/volcengine` provider until each component is re-verified with `volcenginecc`.
+When writing new examples, prefer the Cloud Control provider `volcengine/volcenginecc`. Start from verified examples under `assets/examples/`, then read the matching `references/volcenginecc-*.md` note for validation results and pitfalls. Blocked resources are tracked in [`references/volcenginecc-blocked.md`](./references/volcenginecc-blocked.md). Existing reusable modules under `assets/modules/` still use the legacy `volcengine/volcengine` provider until each component is re-verified with `volcenginecc`.
 
 Use this skill when one of these is true:
 
@@ -39,7 +39,7 @@ Use this skill when one of these is true:
 
 Do not use this skill just because a deployment is long-lived, VKE-based, or has managed dependencies. Recommend IaC where appropriate, but let the user choose. Do not use this skill when the user asks for CLI, a temporary demo/quick validation, a pure ECS single-VM service with no plan/diff/destroy requirement, or when Terraform/provider installation is blocked and the target can safely use the CLI fallback.
 
-The skill ships forty-six clean no-op verified `volcenginecc` examples (`volcenginecc-network`, `volcenginecc-vpc-extras`, `volcenginecc-vpc-traffic-mirror-filter`, `volcenginecc-vpc-traffic-mirror-target`, `volcenginecc-private-nat`, `volcenginecc-ecs`, `volcenginecc-ecs-extras`, `volcenginecc-ecs-launch-template-version`, `volcenginecc-ebs-snapshot`, `volcenginecc-vke`, `volcenginecc-cr`, `volcenginecc-tos`, `volcenginecc-tos-notification`, `volcenginecc-tls`, `volcenginecc-tls-schedule-sql`, `volcenginecc-tls-import-task`, `volcenginecc-cloudmonitor`, `volcenginecc-redis`, `volcenginecc-redis-public-address`, `volcenginecc-iam`, `volcenginecc-iam-users`, `volcenginecc-iam-oidc-provider`, `volcenginecc-iam-saml-provider`, `volcenginecc-clb`, `volcenginecc-clb-certificate`, `volcenginecc-clb-acl`, `volcenginecc-alb`, `volcenginecc-alb-health-check`, `volcenginecc-alb-certificate`, `volcenginecc-alb-acl`, `volcenginecc-alb-customized-cfg`, `volcenginecc-apig`, `volcenginecc-vpn`, `volcenginecc-vpn-ssl`, `volcenginecc-cen`, `volcenginecc-directconnect`, `volcenginecc-transitrouter`, `volcenginecc-privatelink`, `volcenginecc-vefaas`, `volcenginecc-rdsmysql`, `volcenginecc-rdspostgresql`, `volcenginecc-kafka-allow-list`, `volcenginecc-filenas`, `volcenginecc-efs`, `volcenginecc-dns`, `volcenginecc-privatezone`), three lifecycle-verified examples (`volcenginecc-ebs-snapshot-group`, `volcenginecc-autoscaling`, `volcenginecc-rdsmssql`), six legacy reusable modules (`network`, `vke`, `cr`, `rds-mysql`, `redis`, `tos`), and four wrapper scripts (`gen_tfvars.py`, `plan_summary.sh`, `export_outputs.sh`, `check_drift.sh`).
+The skill ships verified `volcenginecc` examples under `assets/examples/`, legacy reusable modules under `assets/modules/`, and wrapper scripts for tfvars generation, plan summaries, output export, and drift checks. Select files only after the target shape is known; do not load broad catalogs into context for small Terraform edits.
 
 Resources outside the six legacy modules (CLB/ALB, VKE, CR, databases, caches, object storage) should be added as verified `volcenginecc` examples first, then wrapped only after repeated use proves the interface is stable.
 
@@ -122,19 +122,16 @@ Before apply, show the plan summary and require explicit user confirmation. Read
 
 ## 2. Deployment stack mapping
 
-Use these opinionated stacks to choose verified examples. Start with examples; wrap into reusable modules only after repeated use proves the interface stable.
+Use the deployment shape to choose a small set of verified examples. Start with examples; wrap into reusable modules only after repeated use proves the interface stable. Typical stacks combine:
 
-| Deployment shape | Examples to compose |
-|---|---|
-| `ecs-docker-public` / `ecs-systemd-public` | `volcenginecc-network`, `volcenginecc-ecs`, optional `volcenginecc-tls`, `volcenginecc-cloudmonitor` |
-| `vke-webapp-cr-clb` | `volcenginecc-network`, `volcenginecc-vke`, `volcenginecc-cr`, `volcenginecc-clb` |
-| `vke-webapp-cr-alb` | `volcenginecc-network`, `volcenginecc-vke`, `volcenginecc-cr`, `volcenginecc-alb`, optional ALB health/cert/ACL examples |
-| `vefaas-http` | `volcenginecc-vefaas`, optional `volcenginecc-apig`, `volcenginecc-tls` |
-| `webapp-rds-redis-tos` | runtime stack plus `volcenginecc-rdsmysql` or `volcenginecc-rdspostgresql`, `volcenginecc-redis`, `volcenginecc-tos` |
-| `private-service-with-nat` | `volcenginecc-network`, `volcenginecc-private-nat`, runtime stack |
-| `domain-and-edge-entry` | runtime stack plus `volcenginecc-dns`, ALB/CLB certificate examples, optional CDN/WAF only after verified examples exist |
+- ECS: `volcenginecc-network`, `volcenginecc-ecs`, optional TLS/CloudMonitor
+- VKE: `volcenginecc-network`, `volcenginecc-vke`, `volcenginecc-cr`, CLB or ALB
+- veFaaS: `volcenginecc-vefaas`, optional APIG/TLS
+- Stateful web app: runtime stack plus RDS, Redis, and/or TOS examples
+- Private service: runtime stack plus private NAT or network connectivity examples
+- Domain entry: runtime stack plus DNS and load balancer certificate examples
 
-The stack mapping is a selection guide, not a promise that a prebuilt module exists. Copy the relevant verified examples into `.volcengine/terraform/<component>` and keep component boundaries clear so plan/destroy output remains readable.
+This mapping is a guide, not a promise that a prebuilt module exists. Copy relevant examples into `.volcengine/terraform/<component>` and keep component boundaries clear so plan/destroy output remains readable.
 
 For the end-to-end VKE private CR nginx path, use `assets/examples/volcengine-vke-cr-nginx/` and read `references/volcengine-vke-cr-nginx.md` first. That example exists for the CR credential addon, `core-dns`, CR token expiry, and image architecture pitfalls found in a real run.
 
@@ -142,72 +139,19 @@ For the end-to-end VKE private CR nginx path, use `assets/examples/volcengine-vk
 
 ## 3. Catalog
 
-### Verified `volcenginecc` examples
+Use the filesystem as the catalog. After selecting a deployment shape, list only the relevant directories under `assets/examples/`, then read the matching `references/volcenginecc-*.md` file for validation notes, import IDs, and provider caveats. Do not load every example into context up front.
 
-| Example | Purpose | Resources |
-|---|---|---|
-| `assets/examples/volcenginecc-network` | Network foundation for ECS/VKE/RDS/Redis/LB deployments | `vpc_vpc`, `vpc_subnet`, `vpc_route_table`, `vpc_security_group`, `vpc_eip`, `natgateway_ngw`, `natgateway_snatentry`, `natgateway_dnatentry` |
-| `assets/examples/volcenginecc-vpc-extras` | Additional VPC controls for subnet ACLs, CIDR reuse, ENIs, HAVIP, and shared bandwidth | `vpc_prefix_list`, `vpc_network_acl`, `vpc_eni`, `vpc_ha_vip`, `vpc_bandwidth_package` |
-| `assets/examples/volcenginecc-vpc-traffic-mirror-filter` | Traffic mirror filter conditions before ECS/CLB target/session wiring | `vpc_traffic_mirror_filter`, `vpc_traffic_mirror_filter_rule` |
-| `assets/examples/volcenginecc-vpc-traffic-mirror-target` | Traffic mirror destination backed by a private CLB | `vpc_traffic_mirror_target`, `clb_clb` |
-| `assets/examples/volcenginecc-private-nat` | Private NAT gateway and additional transit IP for private address translation | `natgateway_ngw`, `natgateway_nat_ip` |
-| `assets/examples/volcenginecc-ecs` | Direct ECS deployments, utility hosts, launch templates, Cloud Assistant commands | `ecs_keypair`, `storageebs_volume`, `ecs_command`, `ecs_launch_template`, `ecs_instance`, second-stage `ecs_invocation` |
-| `assets/examples/volcenginecc-ecs-extras` | ECS placement primitives without creating instances | `ecs_deployment_set`, `ecs_hpc_cluster` |
-| `assets/examples/volcenginecc-ecs-launch-template-version` | Additional ECS launch template versions for controlled rollout changes | `ecs_launch_template`, `ecs_launch_template_version` |
-| `assets/examples/volcenginecc-ebs-snapshot` | Manual snapshot backup for standalone EBS data disks | `storageebs_volume`, `storageebs_snapshot` |
-| `assets/examples/volcenginecc-ebs-snapshot-group` | Snapshot consistency group for an attached ECS system volume | `storageebs_snapshot_group`, plus ECS/network prerequisites |
-| `assets/examples/volcenginecc-autoscaling` | Lifecycle-verified Auto Scaling group/configuration/hook for ECS capacity control | `autoscaling_scaling_group`, `autoscaling_scaling_configuration`, `autoscaling_scaling_lifecycle_hook`, plus launch template/network prerequisites |
-| `assets/examples/volcenginecc-vke` | Managed Kubernetes control plane, private kubeconfig, node pools, and managed addon | `vke_cluster`, `vke_node_pool`, `vke_default_node_pool`, `vke_addon`, `vke_kubeconfig` |
-| `assets/examples/volcenginecc-cr` | Container Registry image repositories for build/deploy pipelines | `cr_registry`, `cr_name_space`, `cr_repository`, `cr_endpoint_acl_policy` |
-| `assets/examples/volcenginecc-tos` | Object storage buckets for artifacts, static assets, logs, backups, or state prerequisites | `tos_bucket`, `tos_bucket_cors`, `tos_bucket_encryption` |
-| `assets/examples/volcenginecc-tos-notification` | TOS object-created event notifications delivered to a released veFaaS function | `tos_bucket_notification`, `tos_bucket`, `vefaas_function`, `vefaas_release` |
-| `assets/examples/volcenginecc-tls` | Log Service project/topic/index/rule/consumer group for application logs | `tls_project`, `tls_topic`, `tls_index`, `tls_rule`, `tls_consumer_group` |
-| `assets/examples/volcenginecc-tls-schedule-sql` | Scheduled SQL analysis from one TLS topic to another | `tls_project`, `tls_topic`, `tls_index`, `tls_schedule_sql_task` |
-| `assets/examples/volcenginecc-tls-import-task` | TOS-to-TLS import task with its target topic and source bucket | `tls_project`, `tls_topic`, `tls_index`, `tos_bucket`, `tls_import_task` |
-| `assets/examples/volcenginecc-cloudmonitor` | Disabled CloudMonitor ECS CPU alert rule for lifecycle-verified monitoring policy management | `cloudmonitor_rule` |
-| `assets/examples/volcenginecc-redis` | Redis cache instance with allowlist, parameter group, and app account | `redis_instance`, `redis_account`, `redis_allow_list`, `redis_parameter_group` |
-| `assets/examples/volcenginecc-redis-public-address` | Redis public endpoint bound to a dedicated EIP; use only when public exposure is deliberate | `redis_endpoint_public_address`, `vpc_eip` |
-| `assets/examples/volcenginecc-iam` | IAM project, assumable role, and custom policy primitives | `iam_project`, `iam_role`, `iam_policy` |
-| `assets/examples/volcenginecc-iam-users` | IAM user and group identity primitives without access keys or login password | `iam_user`, `iam_group` |
-| `assets/examples/volcenginecc-iam-oidc-provider` | External OIDC identity provider metadata for IAM federation | `iam_oidc_provider` |
-| `assets/examples/volcenginecc-iam-saml-provider` | SAML identity provider metadata for IAM SSO | `iam_saml_provider` |
-| `assets/examples/volcenginecc-clb` | Private Classic Load Balancer instance for entry traffic | `clb_clb` |
-| `assets/examples/volcenginecc-clb-certificate` | CLB uploaded server certificate for HTTPS listeners | `clb_certificate` |
-| `assets/examples/volcenginecc-clb-acl` | Classic Load Balancer access-control policy group | `clb_acl` |
-| `assets/examples/volcenginecc-alb` | Private Basic Application Load Balancer, server group, listener, and rule | `alb_load_balancer`, `alb_server_group`, `alb_listener`, `alb_rule` |
-| `assets/examples/volcenginecc-alb-health-check` | Reusable ALB health check template | `alb_health_check_template` |
-| `assets/examples/volcenginecc-alb-certificate` | ALB uploaded server certificate for HTTPS listeners | `alb_certificate` |
-| `assets/examples/volcenginecc-alb-acl` | ALB access-control policy group | `alb_acl` |
-| `assets/examples/volcenginecc-alb-customized-cfg` | ALB reusable NGINX customized config | `alb_customized_cfg` |
-| `assets/examples/volcenginecc-apig` | Private API Gateway entry point and service default domain | `apig_gateway`, `apig_gateway_service` |
-| `assets/examples/volcenginecc-vpn` | Site-to-site IPsec VPN gateway, connection, and static route for VPC connectivity | `vpn_vpn_gateway`, `vpn_customer_gateway`, `vpn_vpn_connection`, `vpn_vpn_gateway_route` |
-| `assets/examples/volcenginecc-vpn-ssl` | SSL VPN remote-access entry point for a VPC | `vpn_vpn_gateway`, `vpn_ssl_vpn_server` |
-| `assets/examples/volcenginecc-cen` | Cloud Enterprise Network with a VPC attachment for cross-network connectivity | `cen_cen`, `vpc_vpc` |
-| `assets/examples/volcenginecc-directconnect` | Direct Connect gateway foundation for dedicated-line connectivity | `directconnect_direct_connect_gateway` |
-| `assets/examples/volcenginecc-transitrouter` | TransitRouter foundation before VPC/VPN/DirectConnect/peer attachments | `transitrouter_transit_router` |
-| `assets/examples/volcenginecc-privatelink` | Interface PrivateLink service backed by private CLB plus consumer endpoint | `privatelink_endpoint_service`, `privatelink_vpc_endpoint`, `clb_clb` |
-| `assets/examples/volcenginecc-vefaas` | Serverless function, release, and disabled timer trigger | `vefaas_function`, `vefaas_release`, `vefaas_timer` |
-| `assets/examples/volcenginecc-rdsmysql` | MySQL instance, database, app account, allowlist, and parameter template | `rdsmysql_instance`, `rdsmysql_database`, `rdsmysql_db_account`, `rdsmysql_allow_list`, `rdsmysql_parameter_template` |
-| `assets/examples/volcenginecc-rdspostgresql` | PostgreSQL instance, database, app account, schema, allowlist, endpoint, and backup | `rdspostgresql_instance`, `rdspostgresql_db_account`, `rdspostgresql_database`, `rdspostgresql_schema`, `rdspostgresql_allow_list`, `rdspostgresql_db_endpoint`, `rdspostgresql_backup` |
-| `assets/examples/volcenginecc-rdsmssql` | Lifecycle-verified SQL Server Basic instance and allowlist with destroy retry caveat | `rdsmssql_instance`, `rdsmssql_allow_list` |
-| `assets/examples/volcenginecc-kafka-allow-list` | Standalone Kafka access allowlist for future Kafka instances | `kafka_allow_list` |
-| `assets/examples/volcenginecc-filenas` | NFS shared file system for ECS/VKE/application storage | `filenas_instance` |
-| `assets/examples/volcenginecc-efs` | EFS shared file system for multi-node application or dataset storage | `efs_file_system` |
-| `assets/examples/volcenginecc-dns` | Public DNS zone for application domains and edge CNAME targets | `dns_zone` |
-| `assets/examples/volcenginecc-privatezone` | VPC-scoped private DNS zone and record for internal service discovery | `privatezone_private_zone`, `privatezone_record` |
+Common example families:
 
-### Legacy `volcengine` modules
+- `volcenginecc-network`, VPC extras, NAT, VPN, DirectConnect, CEN, TransitRouter, PrivateLink, DNS, PrivateZone
+- `volcenginecc-ecs`, ECS extras, launch template versions, EBS snapshots, Auto Scaling
+- `volcenginecc-vke`, `volcenginecc-cr`, CLB/ALB entry, APIG, veFaaS
+- `volcenginecc-rdsmysql`, `volcenginecc-rdspostgresql`, `volcenginecc-rdsmssql`, Redis, Kafka allowlist
+- `volcenginecc-tos`, TOS notification, TLS, CloudMonitor, IAM, FileNAS, EFS
 
-| Module | Purpose | Key inputs | Key outputs |
-|---|---|---|---|
-| `network` | VPC + 2× AZ subnets + default SG | `project`, `az_*`, CIDRs | `vpc_id`, `subnet_ids`, `security_group_id` |
-| `vke` | Cluster + node pool + addons | `vpc_id`, `subnet_ids`, `node_instance_type` | `cluster_id`, `kubeconfig_private` (base64) |
-| `cr` | Registry + namespace + repository | `registry_name`, `namespace`, `repository_name` | `registry_endpoint`, `repository_uri`, `registry_username` |
-| `rds-mysql` | HA MySQL instance | `subnet_id`, `primary_zone_id`, `secondary_zone_id`, `instance_type` | `instance_id`, `endpoints[]` |
-| `redis` | Redis instance (single or HA) | `subnet_id`, `engine_version`, `shard_capacity` | `instance_id` (endpoint via `ve redis DescribeDBInstanceDetail`) |
-| `tos` | Object storage bucket | `bucket_name`, `public_acl`, `storage_class` | `bucket_name`, `intranet_endpoint`, `extranet_endpoint` |
+Legacy `volcengine` modules are still available under `assets/modules/`; read [`references/modules.md`](./references/modules.md) before using them.
 
-> **Why ECS / CLB are not modules yet**: ECS workloads vary too widely (build host vs runtime vs jumphost) for a single helpful interface, so ECS is a verified example rather than a module. EIP and NAT are covered in the verified `volcenginecc-network` example. CLB/ALB should be added as verified examples before they become reusable modules.
+Legacy modules currently cover `network`, `vke`, `cr`, `rds-mysql`, `redis`, and `tos`. ECS and CLB/ALB stay as verified examples because their workload shapes vary too much for one stable module interface.
 
 ---
 
@@ -278,25 +222,7 @@ echo "Resources ready. .volcengine/iac-outputs.json now contains downstream cons
 
 ## 7. Outputs for Downstream
 
-`export_outputs.sh` writes `terraform output -json` to `.volcengine/iac-outputs.json` (mode 0600). The schema downstream skills (`volcengine-deploy`) consume:
-
-```json
-{
-  "vpc_id":            { "value": "vpc-xxxx" },
-  "subnet_ids":        { "value": ["subnet-aaa", "subnet-bbb"] },
-  "security_group_id": { "value": "sg-xxxx" },
-  "cluster_id":        { "value": "cluster-xxxx" },
-  "kubeconfig_private":{ "value": "<base64>", "sensitive": true },
-  "registry_endpoint": { "value": "cr-xxx.cr.volces.com" },
-  "repository_uri":    { "value": "cr-xxx.cr.volces.com/myapp/myapp" },
-  "cr_username":       { "value": "..." },
-  "mysql_endpoint":    { "value": "<addr>:<port>" },
-  "redis_instance_id": { "value": "redis-xxxx" },
-  "tos_bucket":        { "value": "myapp-bucket" }
-}
-```
-
-Some keys are conditional on which modules were enabled. Consumers must `jq` defensively (use `// empty` defaults).
+`export_outputs.sh` writes `terraform output -json` to `.volcengine/iac-outputs.json` with mode `0600`. Downstream skills commonly consume VPC/subnet/security group IDs, VKE kubeconfig, CR repository data, RDS/Redis endpoints or IDs, and TOS bucket names. Some keys are conditional on which examples/modules were enabled; consumers must use defensive `jq` defaults.
 
 ---
 
@@ -349,66 +275,35 @@ Use this:
 
 ## 10. Import Existing Resources
 
-If the user has resources created via `volcengine-cli` (or console) and wants to adopt them under Terraform, use `terraform import`. The import ID format differs per resource. Common cases:
-
-```bash
-# VPC
-terraform import 'module.network.volcengine_vpc.main' vpc-xxxxxxxx
-
-# Subnet
-terraform import 'module.network.volcengine_subnet.primary' subnet-xxxxxxxx
-
-# VKE cluster
-terraform import 'module.vke.volcengine_vke_cluster.main' cluster-xxxxxxxx
-
-# CR registry — replace cr-basic with the actual registry name
-terraform import 'module.cr.volcengine_cr_registry.main' cr-basic
-
-# CR namespace (compound ID: registry:namespace)
-terraform import 'module.cr.volcengine_cr_namespace.main' cr-basic:my-namespace
-
-# CR repository (compound ID: registry:namespace:repo)
-terraform import 'module.cr.volcengine_cr_repository.main' cr-basic:my-namespace:my-repo
-
-# RDS MySQL
-terraform import 'module.rds_mysql.volcengine_rds_mysql_instance.main' mysql-xxxxxxxx
-
-# Redis
-terraform import 'module.redis.volcengine_redis_instance.main' redis-xxxxxxxx
-
-# TOS bucket — replace my-bucket with the actual globally-unique name
-terraform import 'module.tos.volcengine_tos_bucket.main' my-bucket
-```
-
-After import, run `terraform plan` to surface any divergence between your `.tf` config and the imported reality, and reconcile by editing the config (not the state).
+If the user wants to adopt resources created via `volcengine-cli` or console, use `terraform import`. Import IDs differ by resource; read the matching `references/volcenginecc-*.md` or [`references/modules.md`](./references/modules.md) before importing. After import, run `terraform plan` and reconcile by editing config, not state.
 
 ---
 
 ## 11. Safety Rules
 
-| Rule | Reason |
-|---|---|
-| Never read `~/.volcengine/config.json` | File contains plaintext AK/SK |
-| Never commit `terraform.tfstate*` | Contains sensitive state |
-| Always `.gitignore` `.volcengine/iac-outputs.json` | Contains kubeconfig + DB creds |
-| Never pass `-auto-approve` to `terraform apply/destroy` | Bypasses human gate |
-| Run `check_drift.sh` before every apply on shared envs | Prevents trampling out-of-band changes |
-| Set `chmod 0600` on any file holding kubeconfig or secrets | Defense-in-depth |
-| Pin provider versions in every module/example | Provider on `0.0.x` line — patch bumps may still change behavior |
+- Never read `~/.volcengine/config.json`; it may contain plaintext AK/SK.
+- Never commit `terraform.tfstate*` or `.volcengine/iac-outputs.json`.
+- Never pass `-auto-approve` to `terraform apply` or `terraform destroy`.
+- Run `check_drift.sh` before every apply on shared environments.
+- Set mode `0600` on files holding kubeconfig or secrets.
+- Pin provider versions in every module/example.
 
-The skill's scripts enforce most of these mechanically (`export_outputs.sh` chmods 0600). Apply and destroy gates are the agent's responsibility.
+The scripts enforce file permissions where possible. Apply and destroy gates are the agent's responsibility.
 
 ---
 
 ## 12. Troubleshooting
 
+Look up by the exact error string; act on the mapped cause before suspecting unrelated layers.
+
 | Symptom | Cause | Fix |
 |---|---|---|
-| `terraform init`: "Failed to query available provider packages" | Outbound to `registry.terraform.io` blocked | If the user still wants IaC, set up a `provider_installation` filesystem mirror and rerun `init`; otherwise return to `volcengine-deploy` and ask whether to use CLI resource-ledger provisioning. |
-| `terraform init`: "InvalidAccessKeyId" against TOS backend | Terraform s3 backend env vars are not exported | Export `AWS_ACCESS_KEY_ID="$VOLCENGINE_ACCESS_KEY"`, `AWS_SECRET_ACCESS_KEY="$VOLCENGINE_SECRET_KEY"`, and `AWS_EC2_METADATA_DISABLED=true`. |
-| `terraform init`: TOS backend returns `InvalidPathAccess` | Backend uses path-style access or an unsupported workspace prefix shape | Use the verified template in `references/backend-tos.md`: keep `skip_requesting_account_id = true` and remove `force_path_style` / `use_path_style`. |
-| `apply` succeeds for VPC but fails for subnet with `InvalidVpc.InvalidStatus` | VPC not yet `Available` | Add `depends_on = [volcengine_vpc.main]` (already in network module) |
-| VKE cluster stuck in `Creating` for >20 minutes | Quota or AZ capacity | `ve vke DescribeClusters --body '{"Filter":{"Ids":["..."]}}' | jq .Result.Items[0].Status` for the actual reason |
-| `redis` module output missing endpoint | Provider does not export it | Resolve via `ve redis DescribeDBInstanceDetail --InstanceId $(jq -r '.redis_instance_id.value' .volcengine/iac-outputs.json)` |
-| `terraform plan` shows unexpected changes after no edits | Drift, or provider patch bump silently changing default value | Run `check_drift.sh`, inspect `tfplan.json`, decide whether to accept or revert |
+| `terraform init`: "Failed to query available provider packages" | outbound to `registry.terraform.io` blocked | Configure `provider_installation` with a filesystem/internal mirror and rerun `init`; otherwise return to `volcengine-deploy` and ask whether CLI resource-ledger provisioning is acceptable |
+| `terraform init`: "InvalidAccessKeyId" against TOS backend | s3 backend env vars not exported | Export `AWS_ACCESS_KEY_ID="$VOLCENGINE_ACCESS_KEY"`, `AWS_SECRET_ACCESS_KEY="$VOLCENGINE_SECRET_KEY"`, `AWS_EC2_METADATA_DISABLED=true` |
+| `terraform init`: TOS backend returns `InvalidPathAccess` | path-style access or unsupported workspace prefix | Use the verified template in [`references/backend-tos.md`](./references/backend-tos.md): keep `skip_requesting_account_id = true`, remove `force_path_style`/`use_path_style` |
+| `apply` succeeds for VPC but subnet fails with `InvalidVpc.InvalidStatus` | VPC not yet `Available` (consistency window) | Add `depends_on = [volcengine_vpc.main]` (already wired in the network module) |
+| VKE cluster stuck in `Creating` for >20 min | quota or AZ capacity | `ve vke ListClusters --body '{"Filter":{"Ids":["..."]}}' \| jq .Result.Items[0].Status` for the real reason |
+| `redis` output missing endpoint | provider does not export it | Resolve via `ve redis DescribeDBInstanceDetail --InstanceId $(jq -r '.redis_instance_id.value' .volcengine/iac-outputs.json)` |
+| `terraform plan` shows unexpected changes after no edits | drift, or provider patch bump silently changing a default | Run `check_drift.sh`, inspect `tfplan.json`, decide whether to accept or revert |
 | Two engineers' `apply` collide | TOS backend has no DynamoDB-style locking | Coordinate manually; see [`references/backend-tos.md`](./references/backend-tos.md) |
+| Resource-specific apply/import drift | provider caveat for that resource | Read the matching `references/volcenginecc-*.md` note before editing config |

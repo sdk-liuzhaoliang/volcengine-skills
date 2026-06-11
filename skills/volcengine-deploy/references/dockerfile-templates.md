@@ -1,11 +1,11 @@
-# Dockerfile 模板
+# Dockerfile templates
 
-当仓库没有 Dockerfile 时，根据项目类型生成。所有模板遵循最佳实践：
-- 多阶段构建
-- 非 root 用户
-- 最小化基础镜像
-- HEALTHCHECK 指令
-- 固定版本标签
+When the repo has no Dockerfile, generate one based on the project type. All templates follow best practices:
+- Multi-stage build
+- Non-root user
+- Minimal base image
+- HEALTHCHECK instruction
+- Pinned version tags
 
 ---
 
@@ -34,11 +34,11 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 CMD ["node", "dist/index.js"]
 ```
 
-> **适配说明**：
-> - 端口根据 `package.json` 中的 `PORT` 或代码检测调整
-> - 如果没有 build 步骤，去掉 `npm run build` 和 `dist` 目录，直接 `COPY src`
-> - 如果用 `yarn`/`pnpm`，替换对应包管理器命令
-> - NestJS 启动命令通常为 `node dist/main.js`
+> **Adaptation notes**:
+> - Adjust the port from `PORT` in `package.json` or from code detection
+> - If there is no build step, drop `npm run build` and the `dist` directory and `COPY src` directly
+> - If using `yarn`/`pnpm`, replace with the matching package-manager commands
+> - NestJS start command is usually `node dist/main.js`
 
 ---
 
@@ -85,10 +85,10 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "config.wsgi:application"]
 ```
 
-> **适配说明**：
-> - Django 的 WSGI module 路径根据项目结构调整
-> - 如果有 `pyproject.toml` 用 `pip install .` 替代 `requirements.txt`
-> - Poetry 项目：先 `poetry export -f requirements.txt` 再安装
+> **Adaptation notes**:
+> - Adjust Django's WSGI module path to the project structure
+> - If a `pyproject.toml` exists, use `pip install .` instead of `requirements.txt`
+> - Poetry projects: run `poetry export -f requirements.txt` first, then install
 
 ---
 
@@ -112,11 +112,11 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 ENTRYPOINT ["/server"]
 ```
 
-> **适配说明**：
-> - `./cmd/server` 路径根据实际 main package 位置调整
-> - 如果有 `main.go` 在根目录，用 `.` 替代
-> - distroless 镜像无 shell，如需调试可用 `alpine` 替代
-> - HEALTHCHECK 在 distroless 中不支持 CMD shell 形式，K8s probe 代替
+> **Adaptation notes**:
+> - Adjust the `./cmd/server` path to the actual main package location
+> - If `main.go` is in the repo root, use `.` instead
+> - distroless images have no shell; use `alpine` instead if you need to debug
+> - distroless does not support the CMD shell form of HEALTHCHECK; use a K8s probe instead
 
 ---
 
@@ -193,7 +193,7 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 CMD ["app"]
 ```
 
-> **适配说明**：`<binary-name>` 替换为 `Cargo.toml` 中 `[[bin]]` 的 name 或 package name
+> **Adaptation notes**: replace `<binary-name>` with the `[[bin]]` name or package name in `Cargo.toml`
 
 ---
 
@@ -223,9 +223,9 @@ CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
 
 ---
 
-## .dockerignore（通用）
+## .dockerignore (common)
 
-无论哪种语言，都应生成 `.dockerignore`：
+Regardless of language, always generate a `.dockerignore`:
 
 ```text
 .git
@@ -255,3 +255,12 @@ spec/
 coverage/
 .github/
 ```
+
+---
+
+## Gotchas (image build / architecture)
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Container exits immediately with `exec format error` on VKE/ECS | image architecture does not match the target node architecture (common when building directly on Apple Silicon/arm64) | Build for the target architecture: `docker buildx build --platform linux/amd64 ...`; do not trust the local Docker default platform; inspect the pushed image platform before rollout |
+| Runs locally but crashes once pushed | a local arm64 image was pushed to amd64 nodes | Rebuild/push with explicit `--platform linux/amd64`; VKE defaults to `linux/amd64` unless node-pool data proves another architecture |

@@ -1,7 +1,10 @@
 ---
 name: volcengine-tosutil
 description: >-
-  围绕火山引擎对象存储 tosutil 生成与校验命令、规划桶/对象操作并诊断错误。用户提到 tosutil、TOS 桶对象管理、批量上传下载或相关排障时调用。
+  Use when the user mentions tosutil, TOS object storage, bucket/object operations, batch upload
+  or download, object metadata, TOS connectivity, or errors such as 403/network/argument failures.
+  围绕火山引擎对象存储 tosutil 生成与校验命令、规划桶/对象操作并诊断错误；当用户提到
+  tosutil、TOS 桶对象管理、批量上传下载或相关排障时调用。
 license: MIT
 ---
 
@@ -124,10 +127,10 @@ tosutil ls
 - 再用 `config` 确认配置文件路径
 - 最后用 `ls` 验证凭证、地域和网络连通性
 
-如果 `tosutil` 已加入 `PATH`，可这样调用本 Skill：
+如果 `tosutil` 已加入 `PATH`，可这样调用本 Skill（路径相对 skill 根目录）：
 
 ```bash
-python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py \
+python3 scripts/main.py \
   ls \
   --preflight
 ```
@@ -135,7 +138,7 @@ python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py \
 如果 `tosutil` 未加入 `PATH`，可这样调用本 Skill：
 
 ```bash
-python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py \
+python3 scripts/main.py \
   ls \
   --tosutil-binary /absolute/path/to/tosutil \
   --preflight
@@ -148,6 +151,7 @@ python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py \
 - 对批量上传、下载、复制任务，先确认并发和分片阈值，再执行。
 - 对删除类任务，默认给出预检查步骤和回滚提示，不直接跳过确认。
 - 遇到高级命令且参数未完全确认时，优先结合 `tosutil help <command>` 校验，不臆造参数。
+- 非交互删除使用 `-f`，不是 `-y`。清理部署产物时优先删除受限前缀，例如 `tosutil rm tos://bucket/prefix/ -r -f`，避免漏删测试 artifact 或误删无关对象。
 
 ## 标准流程
 
@@ -265,31 +269,31 @@ tosutil setmeta tos://bucketname/object.png -meta aaa:bbb#ccc:ddd
 命令预览（不执行）：
 
 ```bash
-python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py ls --cloud-url tos://bucketname
+python3 scripts/main.py ls --cloud-url tos://bucketname
 ```
 
 执行并返回结构化结果：
 
 ```bash
-python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py ls --cloud-url tos://bucketname --preflight --run
+python3 scripts/main.py ls --cloud-url tos://bucketname --preflight --run
 ```
 
 高风险删除（必须显式确认）：
 
 ```bash
-python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py rm --cloud-url tos://bucketname/prefix/ --recursive --run --yes
+python3 scripts/main.py rm --cloud-url tos://bucketname/prefix/ --recursive --run --yes
 ```
 
 兼容旧入口（legacy）：
 
 ```bash
-python3 .trae/skills/byted-volcengine-tosutil/scripts/main.py --command ls --cloud-url tos://bucketname
+python3 scripts/main.py --command ls --cloud-url tos://bucketname
 ```
 
 推荐目录结构：
 
 ```text
-.trae/skills/byted-volcengine-tosutil/
+volcengine-tosutil/
 ├── SKILL.md
 ├── references/
 │   └── doc-survey.md

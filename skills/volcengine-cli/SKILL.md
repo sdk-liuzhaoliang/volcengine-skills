@@ -35,6 +35,15 @@ metadata:
       - name: VOLCENGINE_ENDPOINT
         required: false
         description: Optional fallback endpoint for extension calls that do not define a product endpoint
+      - name: VOLCENGINE_PROFILE
+        required: false
+        description: Optional Volcengine CLI profile name used by SDK CLI credential fallback
+      - name: VOLCENGINE_CLI_CONFIG_FILE
+        required: false
+        description: Optional Volcengine CLI config path used by SDK CLI credential fallback
+      - name: VOLCENGINE_LOGIN_CACHE_DIRECTORY
+        required: false
+        description: Optional console-login cache directory used by SDK CLI credential fallback
 ---
 
 # Volcengine CLI Skill
@@ -270,7 +279,7 @@ For those, consult [references/extend-apis.md](references/extend-apis.md) and us
 python3 scripts/call_extend_api.py --api <APIName> --params '{"Key":"Value"}'
 ```
 
-The helper resolves `service`, `version`, `method`, endpoint, and content type from its registry. Apply the same read/write/destructive confirmation rules before running extension APIs.
+The helper resolves `service`, `version`, `method`, endpoint, content type, and credentials from its registry/environment. Credentials prefer `VOLCENGINE_ACCESS_KEY`/`VOLCENGINE_SECRET_KEY`; when those environment variables are missing, it warns the user and falls back to the Python SDK's `CLIConfigCredentialProvider` so `ve` profiles from `ak`, `ramrolearn`, `oidc`, `ecsrole`, `sso`, and `console-login` modes can be reused. Apply the same read/write/destructive confirmation rules before running extension APIs.
 
 ---
 
@@ -286,16 +295,17 @@ ve <ServiceCode> <ActionName> --ParamName "value"
 
 Determine the format from `--help` output:
 - **Flat parameter format**: `--help` lists individual `--Key type` entries (e.g., ECS, VPC, IAM) -> pass with `--Key "value"`
+- **Array parameters**: prefer the numbered CLI form shown by `--help`, such as `--InstanceIds.1 "$instance_id"` or `--SubnetIds.1 "$subnet_id"`. Do not assume JSON-array strings are accepted by every action.
 - **JSON format**: `--help` only shows `--body '{...}'` (e.g., Redis, CR, and other POST APIs) -> pass with `--body '{...}'`
 
 ```bash
 # Flat parameters — nested fields use dot notation; arrays use .N index (starting from 1)
-ve ecs RunInstances --Placement.ZoneId "cn-beijing-a"
+ve ecs RunInstances --ZoneId "cn-beijing-a"
 ve ecs RunInstances --NetworkInterfaces.1.SubnetId "subnet-xxxx"
-ve ecs RunInstances --Tags.1.Key "env" --Tags.2.Key "app"
+ve ecs RunInstances --Tags.1.Key "publish-by" --Tags.1.Value "deploy-skill"
 
 # JSON format (when --help only shows --body)
-ve redis CreateDBInstance --body '{"InstanceName":"demo", "RegionId":"cn-beijing", ...}'
+ve redis CreateDBInstance --body '{"InstanceName":"demo","RegionId":"cn-beijing","ConfigureNodes":[{"AZ":"cn-beijing-a"}],"ShardedCluster":0,"NodeNumber":2,"ShardCapacity":1024,"ShardNumber":1,"EngineVersion":"6.0","SubnetId":"subnet-xxxx","VpcId":"vpc-xxxx","Password":"<secret>","Tags":[{"Key":"publish-by","Value":"deploy-skill"}]}'
 ```
 
 ### Response Format

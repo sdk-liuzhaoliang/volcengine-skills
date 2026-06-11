@@ -28,6 +28,10 @@
 修改或新增 skill 前：
 
 - 所有 skill **必须**以 `volcengine-` 为前缀，读 env / 调 bin 必须在 `metadata.openclaw.requires` 声明
+- 用户补充某个 API 的精确 payload、Action、Version 或服务名时，封装脚本、skill 正文、reference 和 TESTING 中的示例必须同步使用该精确值，不要保留旧的空 payload 或猜测参数。
+- 跨 skill 的经验应放在“决策发生的 skill”里；工具型 skill 只保留工具自身能力、参数约束和安全边界，不承载上层部署/排障策略。
+- 不要把一次验证里的具体地域、规格、镜像、镜像源候选、资源清理顺序或临时栈形状写成默认流程；除非它是 API/资源依赖的强约束，否则写成判断原则、约束和示例。
+- 排障 skill 不要把可并行验证的证据项写成固定顺序 checklist；只有存在真实依赖关系时才写顺序，否则按症状、证据类型和判断分支组织。
 
 ## 新增一个 skill 要改哪些文件
 

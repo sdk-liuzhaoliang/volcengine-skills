@@ -15,8 +15,10 @@ ve alb CreateLoadBalancer \
   --SubnetId subnet-xxxx \
   --ZoneMappings.1.ZoneId cn-beijing-b \
   --ZoneMappings.1.SubnetId subnet-xxxx \
-  --LoadBalancerBillingType 2 \
-  --LoadBalancerEdition Basic
+  --LoadBalancerBillingType 1 \
+  --LoadBalancerEdition Basic \
+  --Tags.1.Key publish-by \
+  --Tags.1.Value deploy-skill
 ```
 
-Observed in `cn-beijing`: ALB zones were readable and load balancers, listeners, server groups, certificates, and health-check templates all returned empty lists. No lifecycle test was run because ALB is billable and depends on real VPC/subnet choices.
+Observed in `cn-beijing`: a private Basic ALB created with `publish-by=deploy-skill` appeared in `DescribeLoadBalancers` with the tag attached, then `DeleteLoadBalancer` removed it. ALB creation is billable and depends on real VPC/subnet choices, so keep lifecycle tests short and delete the test load balancer after validation.
