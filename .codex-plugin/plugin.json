@@ -40,7 +40,7 @@
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
     "brandColor": "#1664FF",
     "composerIcon": "./docs/logo.svg",
-    "logo": "./docs/app-icon.svg",
+    "logo": "./docs/logo.svg",
     "screenshots": []
   }
 }
