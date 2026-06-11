@@ -28,9 +28,9 @@ Valid combinations:
 | Product | Engines | Execution path |
 | --- | --- | --- |
 | `rds` | `mysql`, `postgresql`, `sqlserver` | Use the matching RDS CLI service: `rdsmysql`, `rdspostgresql`, or `rdsmssql` |
-| `aidap` | `supabase`, `postgresql` | Call `volcengine-supabase` for AIDAP workspace provisioning |
+| `aidap` | `supabase`, `postgresql` | Call `volcengine-db-supabase` for AIDAP workspace provisioning |
 
-AIDAP here refers to Volcengine's `AI 原生 BaaS 平台 Supabase 版` product; for deployment, treat its database workspace surface as the managed database provider. Keep deploy selection at the stable engine level (`supabase` or `postgresql`) and let `volcengine-supabase` resolve current `CreateWorkspace` `EngineType` / `EngineVersion` enums. Do not model AIDAP Supabase as an RDS PostgreSQL provider variant.
+AIDAP here refers to Volcengine's `AI 原生 BaaS 平台 Supabase 版` product; for deployment, treat its database workspace surface as the managed database provider. Keep deploy selection at the stable engine level (`supabase` or `postgresql`) and let `volcengine-db-supabase` resolve current `CreateWorkspace` `EngineType` / `EngineVersion` enums. Do not model AIDAP Supabase as an RDS PostgreSQL provider variant.
 
 ### MySQL
 **Detection keywords** (config files / code / dependencies):
@@ -68,8 +68,8 @@ ve rdsmysql CreateDBInstance --help
 
 **Volcengine product/engine options**:
 - `database_product=rds`, `database_engine=postgresql`: RDS PostgreSQL (`ve rdspostgresql`) for managed RDS PostgreSQL.
-- `database_product=aidap`, `database_engine=postgresql`: AIDAP PostgreSQL engine workspace via `volcengine-supabase`.
-- `database_product=aidap`, `database_engine=supabase`: AIDAP Supabase engine workspace via `volcengine-supabase`.
+- `database_product=aidap`, `database_engine=postgresql`: AIDAP PostgreSQL engine workspace via `volcengine-db-supabase`.
+- `database_product=aidap`, `database_engine=supabase`: AIDAP Supabase engine workspace via `volcengine-db-supabase`.
 
 When the user explicitly chooses an AIDAP engine from the console choices, preserve that choice. If they only say "PostgreSQL", ask whether they want RDS PostgreSQL or AIDAP PostgreSQL unless the surrounding deployment context already makes one product clear.
 
@@ -91,7 +91,7 @@ When the user explicitly chooses an AIDAP engine from the console choices, prese
 
 #### AIDAP database workspace
 
-Use `volcengine-supabase` when `database_product=aidap`. Do not duplicate AIDAP workspace provisioning in `volcengine-deploy`; read `../../volcengine-supabase/references/deploy-provider.md`, then return with `DATABASE_URL` and any engine-specific AIDAP/Supabase values such as `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY` wired into the deploy env/Secret path.
+Use `volcengine-db-supabase` when `database_product=aidap`. Do not duplicate AIDAP workspace provisioning in `volcengine-deploy`; read `../../volcengine-db-supabase/references/deploy-provider.md`, then return with `DATABASE_URL` and any engine-specific AIDAP/Supabase values such as `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY` wired into the deploy env/Secret path.
 
 ### SQL Server
 **Detection keywords**:

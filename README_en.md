@@ -20,7 +20,7 @@ A skills repository maintained by the Volcengine team, targeting Volcengine use 
 | `volcengine-sdk-generator` | Generate runnable Volcengine SDK examples and answer SDK config questions on demand |
 | `volcengine-tosutil` | Manage Volcengine TOS object storage resources |
 | `volcengine-vefaas` | Deploy and manage Volcengine veFaaS serverless applications |
-| `volcengine-supabase` | Manage Volcengine AIDAP database workspaces (Supabase / PostgreSQL) and use them as deployment database providers |
+| `volcengine-db-supabase` | Manage Volcengine AIDAP database workspaces (Supabase / PostgreSQL) and use them as deployment database providers |
 | `volcengine-troubleshooting` | Troubleshoot and diagnose Volcengine issues |
 | `volcengine-knowledge-search` | Search Volcengine official docs and fetch full text (product concepts/usage/billing/deploy/best practices/terms) |
 
