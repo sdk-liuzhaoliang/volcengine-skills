@@ -1,89 +1,136 @@
-# 支持的运行时依赖
+# Supported runtime dependencies
 
-## 接线闭环
+## Wiring loop
 
-托管依赖不是“创建成功”就结束。部署应用前必须完成下面闭环：
+A managed dependency is not done when it reports "created". Before deploying the app, complete this loop:
 
-1. 获取私网 endpoint，确保依赖和 ECS/VKE 在同一 VPC。
-2. 创建应用数据库/账号或应用 Redis 账号，生成或收集密码。
-3. 将 ECS/VKE 所在子网 CIDR、安全组来源或节点来源加入依赖 allowlist。
-4. 组装 `DATABASE_URL`、`REDIS_URL` 等运行时变量，交给 `volcengine-deploy` 的 env/Secret 注入阶段。
-5. 如果 `migration_paths` 非空，先跑迁移，再做最终健康检查。
+1. Get the private endpoint and ensure the dependency and ECS/VKE are in the same VPC when the selected product uses private VPC connectivity.
+2. Create the app database/account or app Redis account, and generate or collect the password.
+3. Add the ECS/VKE subnet CIDR, security group source, or node source to the dependency allowlist.
+4. Assemble runtime variables such as `DATABASE_URL`, engine-specific database connection strings, and `REDIS_URL`, then hand them to the env/Secret injection stage of `volcengine-deploy`.
+5. If `migration_paths` is non-empty, run migrations first, then do the final health check.
 
-不要使用公网 endpoint 作为默认接线方式；除非用户明确要求公网暴露，并接受安全组/白名单风险。
+Do not use a public endpoint as the default wiring method; only do so when the user explicitly asks for public exposure and accepts the security group / allowlist risk.
 
-## 检测规则
+## Database Product Choice
+
+Represent database selection with:
+
+```json
+{
+  "database_product": "rds",
+  "database_engine": "mysql"
+}
+```
+
+Valid combinations:
+
+| Product | Engines | Execution path |
+| --- | --- | --- |
+| `rds` | `mysql`, `postgresql`, `sqlserver` | Use the matching RDS CLI service: `rdsmysql`, `rdspostgresql`, or `rdsmssql` |
+| `aidap` | `supabase`, `postgresql` | Call `volcengine-supabase` for AIDAP workspace provisioning |
+
+AIDAP here refers to Volcengine's `AI 原生 BaaS 平台 Supabase 版` product; for deployment, treat its database workspace surface as the managed database provider. Keep deploy selection at the stable engine level (`supabase` or `postgresql`) and let `volcengine-supabase` resolve current `CreateWorkspace` `EngineType` / `EngineVersion` enums. Do not model AIDAP Supabase as an RDS PostgreSQL provider variant.
 
 ### MySQL
-**检测关键词**（配置文件/代码/依赖）：
+**Detection keywords** (config files / code / dependencies):
 - `mysql`, `mysql2`, `mysqlclient`, `pymysql`, `MYSQL_HOST`, `3306`, `mysql://`, `jdbc:mysql`
-- `docker-compose.yml` 中 `image: mysql`
+- `image: mysql` in `docker-compose.yml`
 
-**火山引擎服务**：RDS MySQL (`ve rdsmysql`)
+**Volcengine product/engine**: `database_product=rds`, `database_engine=mysql`
 
-**创建参数**：
+**Volcengine service**: RDS MySQL (`ve rdsmysql`)
+
+**Creation parameters**:
 ```bash
 # RDS swagger discovery can return 404; use CLI help for the body schema.
 ve rdsmysql CreateDBInstance --help
 ```
 
-**推荐规格**（入门级）：
-- 实例类型: `HA`（高可用）
-- 规格: `rds.mysql.2c4g`（2核4G）
-- 存储: 20GB ESSD PL0
-- 版本: MySQL 8.0
+**Recommended spec** (entry level):
+- Instance type: `HA` (high availability)
+- Spec: `rds.mysql.2c4g` (2 vCPU / 4 GB)
+- Storage: 20GB ESSD PL0
+- Version: MySQL 8.0
 
-**注意事项**：
-- 必须和 VKE 在同一 VPC
-- 创建后需要创建数据库和账号
-- 白名单需添加 VKE 子网 CIDR
-- 将私网 endpoint、数据库名、账号、密码组装为 `DATABASE_URL`，不要把账号密码写入日志
+**Notes**:
+- Must be in the same VPC as VKE
+- After creation, create the database and account
+- The allowlist must include the VKE subnet CIDR
+- Assemble the private endpoint, database name, account, and password into `DATABASE_URL`; do not write credentials to logs
 
 ---
 
 ### PostgreSQL
-**检测关键词**：
+**Detection keywords**:
 - `pg`, `postgres`, `postgresql`, `psycopg2`, `pg-promise`, `POSTGRES_HOST`, `5432`, `postgres://`, `jdbc:postgresql`
-- `docker-compose.yml` 中 `image: postgres`
+- `image: postgres` in `docker-compose.yml`
 
-**火山引擎服务**：RDS PostgreSQL (`ve rdspostgresql`)
+**Volcengine product/engine options**:
+- `database_product=rds`, `database_engine=postgresql`: RDS PostgreSQL (`ve rdspostgresql`) for managed RDS PostgreSQL.
+- `database_product=aidap`, `database_engine=postgresql`: AIDAP PostgreSQL engine workspace via `volcengine-supabase`.
+- `database_product=aidap`, `database_engine=supabase`: AIDAP Supabase engine workspace via `volcengine-supabase`.
 
-**推荐规格**：
-- 实例类型: `HA`
-- 规格: `rds.postgres.2c4g`
-- 存储: 20GB ESSD PL0
-- 版本: PostgreSQL 15
+When the user explicitly chooses an AIDAP engine from the console choices, preserve that choice. If they only say "PostgreSQL", ask whether they want RDS PostgreSQL or AIDAP PostgreSQL unless the surrounding deployment context already makes one product clear.
 
-**接线**：
-- HA 实例创建时 `NodeInfo` 必须同时包含 `Primary` 和 `Secondary`
-- 应用账号权限使用 `Inherit,Login`，不要用 `ReadWrite`
-- 创建数据库时优先把 `Owner` 设为应用账号；迁移仍缺 `public` schema 权限时，对 `public` 执行 `ModifySchemaOwner`
-- `CreateDatabase` 先省略 `CharacterSetName`；不要传未经验证的 uppercase `UTF8`
-- 实例进入 `Running` 后，账号/库/schema 操作仍可能遇到短暂 exclusive status，等待后重试
-- 创建数据库和应用账号后，使用私网 endpoint 组装 `DATABASE_URL`
-- 白名单加入 ECS/VKE 子网 CIDR 或安全组来源
-- 有迁移目录时先执行迁移，再放量健康检查
+**Recommended spec**:
+- Instance type: `HA`
+- Spec: `rds.postgres.2c4g`
+- Storage: 20GB ESSD PL0
+- Version: PostgreSQL 15
+
+**Wiring**:
+- For HA instances, `NodeInfo` at creation must include both `Primary` and `Secondary`
+- Use `Inherit,Login` for the app account privileges, not `ReadWrite`
+- When creating the database, prefer setting `Owner` to the app account; if migrations still lack `public` schema privileges, run `ModifySchemaOwner` on `public`
+- Omit `CharacterSetName` on `CreateDatabase` at first; do not pass an unverified uppercase `UTF8`
+- After the instance reaches `Running`, account/database/schema operations may still hit a brief exclusive status; wait and retry
+- After creating the database and app account, assemble `DATABASE_URL` from the private endpoint
+- Add the ECS/VKE subnet CIDR or security group source to the allowlist
+- When a migration directory exists, run migrations first, then ramp the health check
+
+#### AIDAP database workspace
+
+Use `volcengine-supabase` when `database_product=aidap`. Do not duplicate AIDAP workspace provisioning in `volcengine-deploy`; read `../../volcengine-supabase/references/deploy-provider.md`, then return with `DATABASE_URL` and any engine-specific AIDAP/Supabase values such as `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY` wired into the deploy env/Secret path.
+
+### SQL Server
+**Detection keywords**:
+- `mssql`, `sqlserver`, `tedious`, `pyodbc`, `SQLSERVER_HOST`, `MSSQL_HOST`, `1433`, `sqlserver://`, `jdbc:sqlserver`
+- `image: mcr.microsoft.com/mssql/server` or `image: *sqlserver*` in `docker-compose.yml`
+
+**Volcengine product/engine**: `database_product=rds`, `database_engine=sqlserver`
+
+**Volcengine service**: RDS SQL Server (`ve rdsmssql`)
+
+**Recommended spec**:
+- Instance type: Basic or HA according to workload and current regional availability.
+- Version/spec must be selected from current `ve rdsmssql` help or describe APIs; do not invent defaults.
+
+**Wiring**:
+- Use the private endpoint and app login credentials to assemble the SQL Server connection string.
+- Add the ECS/VKE subnet CIDR or security group source to the SQL Server allowlist.
+- Treat creation and deletion as slower than stateless resources; poll instance state before database/account follow-up operations.
 
 ---
 
 ### Redis
-**检测关键词**：
+**Detection keywords**:
 - `redis`, `ioredis`, `redis-py`, `REDIS_HOST`, `REDIS_URL`, `6379`, `redis://`
-- `docker-compose.yml` 中 `image: redis`
+- `image: redis` in `docker-compose.yml`
 
-**火山引擎服务**：Redis (`ve redis`)
+**Volcengine service**: Redis (`ve redis`)
 
-**推荐规格**：
-- 类型: 主备版
-- 规格: 1GB 内存
-- 版本: Redis 6.0
+**Recommended spec**:
+- Type: primary-replica
+- Spec: 1GB memory
+- Version: Redis 6.0
 
-**创建示例**：
+**Creation example**:
 ```bash
 ve redis CreateDBInstance --body '{
   "InstanceName": "deploy-<repo>-redis",
   "RegionId": "<region>",
-  "ZoneIds": ["<zone-id>"],
+  "ConfigureNodes": [{"AZ": "<zone-id>"}],
   "ShardedCluster": 0,
   "NodeNumber": 2,
   "ShardCapacity": 1024,
@@ -92,55 +139,58 @@ ve redis CreateDBInstance --body '{
   "SubnetId": "<subnet-id>",
   "VpcId": "<vpc-id>",
   "Password": "<auto-generated>",
-  "Tags": [{"Key": "project", "Value": "<repo>"}]
+  "Tags": [
+    {"Key": "project", "Value": "<repo>"},
+    {"Key": "publish-by", "Value": "deploy-skill"}
+  ]
 }'
 ```
 
-**接线**：
-- 使用私网 endpoint 和应用账号/密码组装 `REDIS_URL`
-- 白名单加入 ECS/VKE 子网 CIDR 或安全组来源
-- 先从应用运行环境执行连通性检查，再做公网健康检查
+**Wiring**:
+- Assemble `REDIS_URL` from the private endpoint and app account/password
+- Add the ECS/VKE subnet CIDR or security group source to the allowlist
+- Run a connectivity check from the app runtime environment first, then a public health check
 
 ---
 
 ### MongoDB
-**检测关键词**：
+**Detection keywords**:
 - `mongodb`, `mongoose`, `pymongo`, `mongoclient`, `MONGO_URI`, `MONGODB_URL`, `27017`, `mongodb://`
-- `docker-compose.yml` 中 `image: mongo`
+- `image: mongo` in `docker-compose.yml`
 
-**火山引擎服务**：MongoDB (`ve mongodb`)
+**Volcengine service**: MongoDB (`ve mongodb`)
 
-**推荐规格**：
-- 类型: 副本集
-- 规格: `mongo.2c4g`（2核4G）
-- 存储: 20GB
-- 版本: MongoDB 5.0
+**Recommended spec**:
+- Type: replica set
+- Spec: `mongo.2c4g` (2 vCPU / 4 GB)
+- Storage: 20GB
+- Version: MongoDB 5.0
 
 ---
 
 ### Kafka
-**检测关键词**：
+**Detection keywords**:
 - `kafka`, `kafkajs`, `kafka-python`, `confluent-kafka`, `KAFKA_BROKERS`, `KAFKA_BOOTSTRAP_SERVERS`, `9092`
-- `docker-compose.yml` 中 `image: *kafka*`
+- `image: *kafka*` in `docker-compose.yml`
 
-**火山引擎服务**：Kafka (`ve kafka`)
+**Volcengine service**: Kafka (`ve kafka`)
 
-**推荐规格**：
-- 版本: 2.8
-- 规格: `kafka.20xrate.hw`（入门级）
-- 存储: 100GB
-- 分区数: 根据 topic 配置
+**Recommended spec**:
+- Version: 2.8
+- Spec: `kafka.20xrate.hw` (entry level)
+- Storage: 100GB
+- Partitions: per topic configuration
 
 ---
 
 ### RabbitMQ
-**检测关键词**：
+**Detection keywords**:
 - `rabbitmq`, `amqplib`, `amqp`, `pika`, `RABBITMQ_HOST`, `AMQP_URL`, `5672`, `amqp://`
-- `docker-compose.yml` 中 `image: rabbitmq`
+- `image: rabbitmq` in `docker-compose.yml`
 
-**火山引擎服务**：无托管服务
+**Volcengine service**: no managed service
 
-**部署方式**：在 VKE 集群中部署官方 Docker 镜像
+**Deployment**: deploy the official Docker image in the VKE cluster
 
 ```yaml
 apiVersion: apps/v1
@@ -212,14 +262,14 @@ spec:
 
 ---
 
-### TOS（对象存储）
-**检测关键词**：
+### TOS (object storage)
+**Detection keywords**:
 - `@volcengine/tos`, `tos-sdk`, `TOS_ENDPOINT`, `TOS_BUCKET`, `tos.volces.com`
-- 代码中引用了 S3 兼容 API 且 endpoint 指向火山
+- code references an S3-compatible API with the endpoint pointing at Volcengine
 
-**火山引擎服务**：TOS (`tosutil` / Terraform IaC)
+**Volcengine service**: TOS (`tosutil` / Terraform IaC)
 
-当前 `ve` CLI build 可能没有 `tos` 服务；不要生成 `ve tos` 命令。需要对象传输时优先使用独立的 `volcengine-tosutil` skill 或 Terraform/IaC 创建桶。`volcengine-deploy` 中的 `tosutil` 只能是可选能力，必须保留 SSH/scp 或用户提供 artifact URL 降级。
+The current `ve` CLI build may not have a `tos` service; do not generate `ve tos` commands. When object transfer is needed, prefer the standalone `volcengine-tosutil` skill or create the bucket with Terraform/IaC. In `volcengine-deploy`, `tosutil` can only be an optional capability, and you must keep SSH/scp or a user-provided artifact URL as a fallback.
 
 ```bash
 tosutil mb tos://deploy-<repo>-assets -acl=private -sc=STANDARD
@@ -229,16 +279,16 @@ tosutil presign tos://deploy-<repo>-assets/artifacts/app.tar.gz -vp=15min
 
 ---
 
-## 通用依赖处理（不在上述列表中）
+## Generic dependency handling (not in the list above)
 
-对于其他服务依赖（如 Elasticsearch、MinIO、Memcached 等），采用以下策略：
+For other service dependencies (e.g. Elasticsearch, MinIO, Memcached), use this strategy:
 
-1. 在 VKE 集群中以 **StatefulSet** 部署官方 Docker 镜像
-2. 使用 **PVC** 持久化数据
-3. 通过 **ClusterIP Service** 暴露给应用
+1. Deploy the official Docker image as a **StatefulSet** in the VKE cluster
+2. Persist data with a **PVC**
+3. Expose it to the app via a **ClusterIP Service**
 
 ```yaml
-# 通用模板
+# Generic template
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

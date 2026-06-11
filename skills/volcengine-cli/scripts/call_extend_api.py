@@ -17,6 +17,7 @@ import hmac
 import json
 import os
 import sys
+from dataclasses import dataclass
 from typing import Any
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -34,6 +35,18 @@ except ImportError as exc:  # pragma: no cover - depends on user environment
 
 DEFAULT_REGION = "cn-beijing"
 DEFAULT_HOST = "open.volcengineapi.com"
+
+
+@dataclass(frozen=True)
+class ResolvedCredentials:
+    ak: str
+    sk: str
+    session_token: str = ""
+    provider_name: str = ""
+
+
+class CredentialResolutionError(RuntimeError):
+    pass
 
 
 def create_universal_info(service, action, version="2021-09-01", method="POST", content_type="application/json"):
@@ -629,6 +642,108 @@ def env(name: str, default: str = "") -> str:
     return os.getenv(name, default)
 
 
+def _credential_attr(credentials: Any, attr: str) -> str:
+    if isinstance(credentials, dict):
+        value = credentials.get(attr)
+    else:
+        value = getattr(credentials, attr, None)
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _env_value(env_getter, name: str) -> str:
+    try:
+        value = env_getter(name, "")
+    except TypeError:
+        value = env_getter(name)
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def resolve_volcengine_credentials(
+    *,
+    profile: str | None = None,
+    config_file: str | None = None,
+    session_token: str | None = None,
+    env_getter=env,
+    cli_provider_factory=None,
+    notify=None,
+) -> ResolvedCredentials:
+    """Resolve AK/SK from env first, then from the Volcengine CLI credential provider.
+
+    CLIConfigCredentialProvider handles the CLI profile modes supported by the
+    SDK: ak, ramrolearn, oidc, ecsrole, sso, and console-login.
+    """
+    env_ak = _env_value(env_getter, "VOLCENGINE_ACCESS_KEY")
+    env_sk = _env_value(env_getter, "VOLCENGINE_SECRET_KEY")
+    if env_ak and env_sk:
+        return ResolvedCredentials(
+            ak=env_ak,
+            sk=env_sk,
+            session_token=(
+                str(session_token).strip()
+                if session_token is not None
+                else _env_value(env_getter, "VOLCENGINE_SESSION_TOKEN")
+            ),
+            provider_name="EnvironmentVariableCredentialProvider",
+        )
+
+    if notify:
+        missing = []
+        if not env_ak:
+            missing.append("VOLCENGINE_ACCESS_KEY")
+        if not env_sk:
+            missing.append("VOLCENGINE_SECRET_KEY")
+        notify(
+            "{} not detected; trying Volcengine CLI credentials from ve login/profile.".format(
+                " and ".join(missing)
+            )
+        )
+
+    if cli_provider_factory is None:
+        try:
+            from volcenginesdkcore.auth.providers.cli_config_provider import CLIConfigCredentialProvider
+        except ImportError as exc:
+            raise CredentialResolutionError(
+                "VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY are not set, and the installed "
+                "volcenginesdkcore cannot load CLIConfigCredentialProvider. Install or upgrade "
+                "the Volcengine Python SDK, run ve login/configure, or set AK/SK environment variables."
+            ) from exc
+        cli_provider_factory = CLIConfigCredentialProvider
+
+    try:
+        provider = cli_provider_factory(profile_name=profile, config_path=config_file)
+        credentials = provider.get_credentials()
+    except Exception as exc:
+        raise CredentialResolutionError(
+            "VOLCENGINE_ACCESS_KEY/VOLCENGINE_SECRET_KEY are not set, and Volcengine CLI "
+            "credential resolution failed. Run ve login, configure a ve profile, or set "
+            "VOLCENGINE_ACCESS_KEY and VOLCENGINE_SECRET_KEY. Underlying error: {}".format(exc)
+        ) from exc
+
+    ak = _credential_attr(credentials, "ak")
+    sk = _credential_attr(credentials, "sk")
+    if not ak or not sk:
+        provider_name = _credential_attr(credentials, "provider_name") or "Volcengine CLI credential provider"
+        raise CredentialResolutionError(
+            "{} returned incomplete credentials. Run ve login, configure a ve profile, or set "
+            "VOLCENGINE_ACCESS_KEY and VOLCENGINE_SECRET_KEY.".format(provider_name)
+        )
+
+    return ResolvedCredentials(
+        ak=ak,
+        sk=sk,
+        session_token=(
+            str(session_token).strip()
+            if session_token is not None
+            else _credential_attr(credentials, "session_token")
+        ),
+        provider_name=_credential_attr(credentials, "provider_name") or "CLIConfigCredentialProvider",
+    )
+
+
 def split_query_body(
     params: dict[str, Any],
     query_keys: list[str] | None,
@@ -919,6 +1034,24 @@ def call_flink_path(
     return response, 200, {}
 
 
+def response_from_sdk_api_exception(exc: Exception) -> tuple[Any, int, dict[str, str]] | None:
+    status = getattr(exc, "status", None)
+    body = getattr(exc, "body", None)
+    if status is None or body is None:
+        return None
+    if isinstance(body, bytes):
+        body = body.decode("utf-8", errors="replace")
+    if isinstance(body, str):
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            payload = body
+    else:
+        payload = body
+    headers = getattr(exc, "headers", None) or {}
+    return payload, int(status), dict(headers)
+
+
 def resolve_host(entry: dict[str, Any], region: str, explicit_host: str | None) -> str:
     if explicit_host:
         return explicit_host
@@ -985,24 +1118,38 @@ def call_api(args: argparse.Namespace) -> int:
     params = parse_json_value(args.params)
     query_params, body_params = split_query_body(params, entry.get("query_keys"), entry.get("preserve_query_keys_in_body"))
     region = args.region or entry.get("region") or env("VOLCENGINE_REGION") or DEFAULT_REGION
-    session_token = args.session_token or env("VOLCENGINE_SESSION_TOKEN")
     host = resolve_host(entry, region, args.host)
     scheme = args.scheme or entry.get("scheme") or "https"
     content_type = args.content_type or entry.get("content_type") or "application/json"
 
-    ak = env("VOLCENGINE_ACCESS_KEY")
-    sk = env("VOLCENGINE_SECRET_KEY")
-    if not ak or not sk:
-        raise SystemExit("VOLCENGINE_ACCESS_KEY and VOLCENGINE_SECRET_KEY are required")
+    try:
+        credentials = resolve_volcengine_credentials(
+            profile=args.profile,
+            config_file=args.config_file,
+            session_token=args.session_token,
+            notify=lambda message: print(message, file=sys.stderr),
+        )
+    except CredentialResolutionError as exc:
+        raise SystemExit(str(exc)) from exc
+    ak = credentials.ak
+    sk = credentials.sk
+    session_token = credentials.session_token
 
     info = create_universal_info(
         service=entry["service"],
         action=entry["name"],
-            version=entry["version"],
-            method=expected_method,
-            content_type=content_type,
-        )
-    client = create_api_client(ak=ak, sk=sk, session_token=session_token, region=region, host=host, scheme=scheme)
+        version=entry["version"],
+        method=expected_method,
+        content_type=content_type,
+    )
+    client = create_api_client(
+        ak=ak,
+        sk=sk,
+        session_token=session_token,
+        region=region,
+        host=host,
+        scheme=scheme,
+    )
     if entry.get("call_style") == "flink_path":
         response, status_code, response_headers = call_flink_path(
             ak=ak,
@@ -1052,7 +1199,13 @@ def call_api(args: argparse.Namespace) -> int:
             scheme=scheme,
         )
     else:
-        response, status_code, response_headers = client.do_call_with_http_info(info=info, body=params)
+        try:
+            response, status_code, response_headers = client.do_call_with_http_info(info=info, body=params)
+        except Exception as exc:
+            sdk_error_response = response_from_sdk_api_exception(exc)
+            if sdk_error_response is None:
+                raise
+            response, status_code, response_headers = sdk_error_response
 
     if args.output == "json":
         print(json.dumps(response, ensure_ascii=False))
@@ -1076,6 +1229,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scheme", choices=["https", "http"], help="Override endpoint scheme")
     parser.add_argument("--content-type", help="Override content type")
     parser.add_argument("--session-token", help="Override VOLCENGINE_SESSION_TOKEN")
+    parser.add_argument("--profile", help="Volcengine CLI profile name for ve login/config credentials")
+    parser.add_argument(
+        "--config-file",
+        help=(
+            "Volcengine CLI config file path; defaults to "
+            "VOLCENGINE_CLI_CONFIG_FILE or ~/.volcengine/config.json"
+        ),
+    )
     parser.add_argument("--output", choices=["pretty", "json"], default="pretty")
     parser.add_argument("--show-headers", action="store_true")
     parser.add_argument("--include-test", action="store_true", help="Include test-only APIs in --list/--describe/calls")

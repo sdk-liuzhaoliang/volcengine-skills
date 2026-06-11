@@ -1,19 +1,34 @@
 # Deploy Mode Heuristics
 
-Use this when `volcengine-prepare` explains ECS / VKE / veFaaS choices. The output is a ranked recommendation for the user, not a score table and not a filter. Always show all three paths, pick a default deployment mode, and ask for lifecycle, reuse, and resource-management choices. Use `ecs | vke | vefaas` as machine-readable mode values.
+Use this when `volcengine-prepare` explains ECS / VKE / veFaaS choices. The output is a ranked recommendation for the user, not a score table and not a filter. Show every materially viable path, pick a default deployment mode when the deploy target is clear, and ask for lifecycle, reuse, and resource-management choices. Use `ecs | vke | vefaas` as machine-readable mode values.
 
 ## Ranking rules
 
-Rank by project shape first. Do not demote a path just because a local tool is missing; tool checks happen after the user chooses.
+Rank by deployable service surface first. Do not demote a path just because a local tool is missing; tool checks happen after the user chooses.
 
-If analysis reports `deploy_subdir`, rank the app in that subdirectory. Only treat a subdirectory as deployable when it has runnable signals such as Docker/compose, package scripts, or language entrypoints; static documentation or example HTML alone is not enough.
+If analysis reports `deploy_subdir`, rank the app in that subdirectory. Only treat a repo or subdirectory as deployable when there is a concrete target: the repo, subdirectory, command, artifact, static output, or existing cloud app/function that a path can actually run, containerize, expose, or serve.
+
+File and framework signals are only evidence. A Dockerfile, compose file, `package.json`, framework dependency, or `build`/`dev`/`test` script does not by itself mean the repo is deployable.
+
+Before ranking, identify whether there is a concrete deploy target for ECS, VKE, or veFaaS: something that can be run, containerized, exposed, or served by one of those paths.
+
+Useful evidence includes, but is not limited to: a long-running process, start command, listening port, RPC/API/HTTP route, health/smoke endpoint, static/frontend build output intended to be served, clear frontend/backend service boundaries, existing veFaaS app/function, or a user-provided subdirectory, service, command, artifact, or runtime target.
+
+If the surface is unclear, ask one focused follow-up before giving a strong recommendation:
+
+```text
+I can see build/package signals, but not the deploy target yet. Which subdirectory, service, command, artifact, static output, or existing veFaaS app/function should be deployed?
+```
+
+Use this downgrade path for repos that look like a library/SDK, CLI tool, agent skill, plugin, desktop app, tutorial/demo fragment, documentation-only project, or monorepo root without a selected app. These repos are not ECS/VKE/veFaaS deployment targets by default. If the user explicitly asks to deploy one, continue by identifying the concrete runtime surface, such as a docs site, example app, demo API, service command, static build output, or artifact to run; do not reject the request just because of the repo category.
 
 ### Prefer ECS when
 
 - The user wants the fastest path to a public URL.
-- The service can run as a binary, a single process, Docker, or docker compose.
+- The deployable surface can run on a Linux VM as a Web/API/RPC service, full-stack app, static-site serving process, binary, Docker/compose app, worker, or scheduled command.
 - The project is simple enough for one VM or a small number of VMs.
-- The repo has external dependencies but does not need Kubernetes-level rollout, autoscaling, or multi-service orchestration.
+- The repo has external dependencies but the selected service does not need Kubernetes-level rollout, autoscaling, or multi-service orchestration.
+- The app needs OS, network, disk, package, or debugging control.
 - The user needs a quick validation, fastest public URL, or one-VM shape. For resource management, recommend CLI for pure ECS single-VM deployments, especially when Terraform or provider registry access is unavailable. Recommend IaC for ECS when it is team-managed, needs managed dependencies, or needs plan/diff/destroy safety.
 
 ECS packaging:
@@ -30,30 +45,34 @@ Explain the default ECS shape:
 - It creates or reuses an ECS instance.
 - New public services get an EIP as the access endpoint.
 - Ask the user whether to open SSH 22. If they do not want SSH, deploy and debug through Cloud Assistant.
-- Approximate cost: `中` (ECS instance + system disk + EIP/bandwidth; plus any managed dependencies).
+- Approximate cost: `medium` (ECS instance + system disk + EIP/bandwidth; plus any managed dependencies).
 
 ### Prefer VKE when
 
-- The repo already has Dockerfile/compose and looks like a containerized app.
-- The app needs multiple replicas, rolling updates, HPA, Kubernetes Jobs, or network policies.
-- The repo has multiple services, multiple languages, or several long-running processes.
+- The selected deployable surface is containerized or naturally maps to Kubernetes workloads.
+- The app needs multiple replicas, rolling updates, HPA, Kubernetes Jobs/CronJobs, Ingress/Service, or network policies.
+- The selected app has multiple services, multiple languages, or several long-running processes.
 - Migrations or workers need a cleaner lifecycle than a single systemd service.
+- The workload needs GPU resources or production container operations.
 - The user wants a production-shaped container platform.
 
 Recommend Terraform/volcenginecc for VKE resource creation because clusters, node pools, CR, LB, and managed dependencies benefit from plan/diff/destroy safety. Use `ve` CLI plus `.volcengine/created-resources.json` only if the user chooses CLI after seeing the tradeoff, for temporary validation, or when Terraform is unavailable.
 
-Approximate cost: `中-高` (VKE nodes + CR + CLB/EIP + bandwidth; plus databases/cache/storage).
+Approximate cost: `medium-high` (VKE nodes + CR + CLB/EIP + bandwidth; plus databases/cache/storage).
 
 ### Prefer veFaaS when
 
-- The app is stateless and has a single supported entrypoint.
-- There are no in-band DB migrations or long-running workers.
-- The framework is likely supported by the `volcengine-vefaas` skill, such as FastAPI, Django, Flask, Express, Next.js, Nuxt, NestJS, Remix, Vite, Astro, Vitepress, or Angular.
+- The target fits the `volcengine-vefaas` skill workflow: a supported Web/API framework, supported frontend/static framework, or an existing veFaaS app/function.
+- The target is an MCP project and does not have a user-mandated ECS runtime. For MCP, rank veFaaS first, ECS second, and do not recommend VKE by default because this workflow needs session keeping.
+- There are no complex in-band DB migrations, long-running workers, multi-service orchestration needs, unsupported event/task/trigger creation, custom system dependencies, or API Gateway blockers.
+- The framework is likely supported by the `volcengine-vefaas` skill, such as FastAPI, Django, Flask, Express, Next.js, Nuxt, NestJS, Remix, Vite, Astro, Vitepress, Rspress, Create React App, or Angular.
 - Low operational overhead and pay-by-use economics matter more than infrastructure control.
 
 If the user chooses veFaaS, switch to/call the `volcengine-vefaas` skill. If it fails, return to the main deployment flow and let the user retry veFaaS or switch to ECS/VKE. Do not use the legacy ZIP/API flow in `volcengine-deploy`.
 
-Approximate cost: `低-中` (function resources + API Gateway; plus dependency services if used).
+For MCP projects, use `volcengine-vefaas/references/mcp-deployment.md` after selecting veFaaS. VKE is only appropriate when the user explicitly asks for Kubernetes and already has a session-affinity plan.
+
+Approximate cost: `low-medium` (function resources + API Gateway; plus dependency services if used).
 
 ## Common warning signals
 
@@ -61,11 +80,17 @@ Mention these in the relevant option, but do not hide the option:
 
 | Signal | What to tell the user |
 |---|---|
+| Dockerfile but no long-running process, port, route, static output, or user-specified start command | Dockerfile is packaging evidence, not deployability. Ask which service or artifact should be run. |
+| Dockerfile references missing scripts or placeholder server packages | Treat the Dockerfile as stale or incomplete. Do not recommend ECS/VKE until a working build command and runtime entrypoint are confirmed. |
+| `package.json` only has build/dev/test-like scripts | Build tooling is not a service contract. Ask whether this is a frontend site, full-stack app, API service, library, or tooling package. |
+| README or runtime docs give an official port, route, or deploy command | Prefer those docs over default guesses, then verify with a smoke check after deployment. |
+| Monorepo root with multiple candidates | Ask for the app/subdir to deploy before ranking. |
+| Library/SDK/CLI/desktop/tutorial/docs-like repo | Downgrade to manual confirmation; ask what online service or site should be exposed. |
 | `migration_paths` non-empty | veFaaS may need a separate migration step; VKE can run a Job, ECS can run a one-shot command. |
 | WebSocket / long-lived connections | ECS or VKE is usually safer than veFaaS. |
 | Compose file with Redis/MySQL/etc. | ECS compose can run it quickly, but data durability and scaling are weaker than managed services or VKE. |
 | Many stateful dependencies | VKE or managed services may be more appropriate; ECS remains possible for quick validation. |
-| External MySQL/PostgreSQL/Redis dependency | Recommend managed RDS/Redis by default; same VPC, private endpoint, explicit migration step. |
+| External MySQL/PostgreSQL/SQL Server/Redis dependency | Recommend managed RDS/Redis by default; same VPC, private endpoint, explicit migration step. For AIDAP database workspaces, ask for the AIDAP engine (`supabase` or `postgresql`) instead of treating Supabase as an RDS PostgreSQL variant. |
 | Project only uses SQLite | Keep it as a valid choice; warn about single-node/disk durability, but do not imply RDS migration is required. |
 | Long-lived cloud resources | Recommend IaC for VKE, managed dependencies, team-owned infrastructure, or plan/diff/destroy needs. Recommend CLI for pure ECS single-VM services when speed and fewer dependencies matter more. |
 | Static frontend | veFaaS/static serving may be possible, but ECS/VKE are still valid if the user wants one service shape. |
@@ -104,6 +129,15 @@ Mention these in the relevant option, but do not hide the option:
 3. VKE
    - Reason: valid but heavier unless the user wants Kubernetes.
 
+### MCP project
+
+1. veFaaS
+   - Reason: default MCP path for HTTP exposure and session keeping.
+2. ECS
+   - Reason: fallback when veFaaS does not fit the runtime, dependency installation, or system-control needs.
+3. VKE
+   - Warning: not a default MCP path; use only when the user explicitly asks for Kubernetes and already has a session-affinity plan.
+
 ## Resource management recommendation
 
 Recommend resource management, then ask the user to choose:
@@ -124,13 +158,13 @@ For China network conditions, include a note when Docker images are involved: Do
 After presenting the ranked list, ask only:
 
 ```text
-1. 部署方式：默认使用推荐第一项。可选 ECS / VKE / veFaaS（记录为 `ecs` / `vke` / `vefaas`）。
-2. 资源策略：默认新建独立项目 deploy-<repo> 并创建新资源；也可以复用已有资源。
-3. 资源管理：建议 <cli|iac>；请确认用 CLI 资源账本还是 Terraform/IaC。
+1. Deployment mode: defaults to the top-ranked option. Choose ECS / VKE / veFaaS (recorded as `ecs` / `vke` / `vefaas`).
+2. Resource strategy: defaults to a new isolated project deploy-<repo> with new resources; you may also reuse existing resources.
+3. Resource management: recommend <cli|iac>; confirm whether to use the CLI resource ledger or Terraform/IaC.
 ```
 
 Mention the resource management recommendation, then ask for confirmation:
 
 ```text
-资源管理建议：VKE、托管依赖和团队资源选 Terraform/volcenginecc；纯 ECS 单机、临时验证或 IaC 不可用时选 ve CLI 快速创建并记录资源账本。请确认用 `iac` 还是 `cli`。
+Resource management recommendation: choose Terraform/volcenginecc for VKE, managed dependencies, and team resources; choose the ve CLI fast path (record a resource ledger) for plain single-VM ECS, temporary validation, or when IaC is unavailable. Confirm `iac` or `cli`.
 ```

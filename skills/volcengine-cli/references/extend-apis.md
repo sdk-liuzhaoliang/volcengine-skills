@@ -12,7 +12,14 @@ It embeds the extension API registry and the request-signing code needed by thes
 
 ## Credentials
 
-The script reads credentials from environment variables:
+The script resolves credentials in this order:
+
+1. Environment variables.
+2. Volcengine CLI config through the Python SDK `CLIConfigCredentialProvider`.
+
+If `VOLCENGINE_ACCESS_KEY` or `VOLCENGINE_SECRET_KEY` is not detected, the helper prints a notice and then tries to reuse the active `ve` CLI profile. The SDK provider supports CLI profiles whose `mode` is `ak`, `ramrolearn`, `oidc`, `ecsrole`, `sso`, or `console-login`.
+
+Environment variables:
 
 ```bash
 export VOLCENGINE_ACCESS_KEY="AK..."
@@ -22,7 +29,16 @@ export VOLCENGINE_REGION="cn-beijing"
 export VOLCENGINE_SESSION_TOKEN="..."
 ```
 
-Do not print or echo secrets in the conversation. If credentials are missing, ask the user to set them in their shell.
+CLI profile fallback:
+
+```bash
+python3 scripts/call_extend_api.py \
+  --profile default \
+  --api QueryMetrics \
+  --params '{"workspace":"vmp-workspace-id","query":"up"}'
+```
+
+Use `--config-file /path/to/config.json` only when the CLI config is not in the default location. Do not print or echo secrets in the conversation. If both environment credentials and CLI profile resolution fail, ask the user to run `ve login`, configure a `ve` profile, or set `VOLCENGINE_ACCESS_KEY` and `VOLCENGINE_SECRET_KEY` in their shell.
 
 ## Discover Supported APIs
 
@@ -106,6 +122,7 @@ To validate VMP APIs with real data, create a temporary VMP workspace, enable pu
 ve vmp CreateWorkspace --body '{
   "Name":"codex-vmp-api-verify",
   "InstanceTypeId":"vmp.standard.15d",
+  "Tags":[{"Key":"publish-by","Value":"deploy-skill"}],
   "DeleteProtectionEnabled":false,
   "PublicAccessEnabled":true,
   "PublicWriteBandwidth":1,

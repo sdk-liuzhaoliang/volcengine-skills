@@ -54,7 +54,7 @@ Start from the appropriate sub-step based on what is already known. When the use
 
 #### 2a. Query service list (when the service is unknown)
 
-```
+```text
 GET https://api.volcengine.com/api/common/explorer/services
 ```
 
@@ -68,7 +68,7 @@ Match the most appropriate `ServiceCode` based on the user's description.
 
 #### 2b. Query version list (when the version is unknown)
 
-```
+```text
 GET https://api.volcengine.com/api/common/explorer/versions?ServiceCode={ServiceCode}
 ```
 
@@ -80,7 +80,7 @@ Prefer the version with `IsDefault=1`. If none is marked default, use the latest
 
 #### 2c. Query API list (when the specific API is unknown)
 
-```
+```text
 GET https://api.volcengine.com/api/common/explorer/apis?ServiceCode={ServiceCode}&Version={Version}&APIVersion={Version}
 ```
 
@@ -96,7 +96,7 @@ Match user intent using `Action`, `NameCn`, and `Description`.
 
 #### 2d. Query API details (core step)
 
-```
+```text
 GET https://api.volcengine.com/api/common/explorer/api-swagger?ServiceCode={ServiceCode}&Version={Version}&APIVersion={Version}&ActionName={ActionName}
 ```
 
@@ -133,7 +133,7 @@ POST parameters often have nested structures that require recursive parsing:
 - `$ref: "#/components/schemas/XxxObject"` -> look up the definition in `components.schemas` and expand recursively
 
 Present nested parameters in a tree structure:
-```
+```text
 - InstanceId (string, required): instance ID
 - DatabasePrivileges (array, optional): database privilege list
   - AccountName (string, required): account name
@@ -192,7 +192,7 @@ In `paths["/{ActionName}"].{method}.responses["x-error-code"].content["applicati
 
 When the user describes a requirement in natural language, searching is often the fastest approach. This can be used alongside steps 2a–2c.
 
-```
+```text
 GET https://api.volcengine.com/api/common/search/all?Query={keyword}&Channel=api
 ```
 
@@ -239,7 +239,7 @@ Combine the `description` (Chinese) and `message` (English) fields to provide:
 2. **If the user provides a service name but no API name**: infer the most likely API from the error pattern and context, then query its Swagger to confirm.
 3. **Fallback search**: if the user cannot provide more context, use the error code search endpoint:
 
-```
+```text
 GET https://api.volcengine.com/api/common/search/all?Query={error_code}&Channel=error_code
 ```
 
