@@ -15,7 +15,7 @@ Available skills:
 - `volcengine-api` — query Volcengine API specifications.
 - `volcengine-tosutil` — access and manage TOS object storage resources on Volcengine.
 - `volcengine-vefaas` — deploy and manage serverless applications on Volcengine veFaaS.
-- `volcengine-supabase` — manage AIDAP Supabase workspaces and use Supabase as a deployment database provider.
+- `volcengine-db-supabase` — manage AIDAP Supabase workspaces and use Supabase as a deployment database provider.
 - `volcengine-troubleshooting` — locally troubleshoot Volcengine errors across OpenAPI/CLI/SDK/IAM/billing/compute/network/storage/database/CDN/media/AI/security/VKE.
 - `volcengine-knowledge-search` — search Volcengine official documentation and fetch full document content.
 

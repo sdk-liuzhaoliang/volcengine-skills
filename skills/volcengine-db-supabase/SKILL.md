@@ -1,5 +1,5 @@
 ---
-name: volcengine-supabase
+name: volcengine-db-supabase
 description: >-
   Manage Volcengine AI Native BaaS for Supabase (AIDAP) database workspaces as a deployment database provider.
   Use when the user asks for Volcengine Supabase, AIDAP PostgreSQL, AIDAP database workspace setup, branch management,

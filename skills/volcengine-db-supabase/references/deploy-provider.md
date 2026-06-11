@@ -29,7 +29,7 @@ https://console.volcengine.com/iam/service/attach_role/?ServiceName=aidap
 3. If AK/SK environment variables are available, run enterprise verification:
 
 ```bash
-python3 skills/volcengine-supabase/scripts/aidap_bootstrap.py get-verify-info
+python3 skills/volcengine-db-supabase/scripts/aidap_bootstrap.py get-verify-info
 ```
 
 Treat the account as enterprise verified only when `verification.enterprise_verified=true`, which requires `IsVerified=true` and `IdentityType="enterprise"`.
@@ -99,9 +99,9 @@ When writing `DATABASE_URL` locally for deployment handoff, use a credential fil
 When `database_engine=supabase` and `volcengine-deploy` or a user workflow expects old Supabase skill actions, use:
 
 ```bash
-python3 skills/volcengine-supabase/scripts/supabase_dataplane.py execute-sql --workspace-id ws-xxxx --query "select 1"
-python3 skills/volcengine-supabase/scripts/supabase_dataplane.py apply-migration --workspace-id ws-xxxx --name deploy_migration --query-file ./migration.sql
-python3 skills/volcengine-supabase/scripts/supabase_dataplane.py generate-typescript-types --workspace-id ws-xxxx --schemas public
+python3 skills/volcengine-db-supabase/scripts/supabase_dataplane.py execute-sql --workspace-id ws-xxxx --query "select 1"
+python3 skills/volcengine-db-supabase/scripts/supabase_dataplane.py apply-migration --workspace-id ws-xxxx --name deploy_migration --query-file ./migration.sql
+python3 skills/volcengine-db-supabase/scripts/supabase_dataplane.py generate-typescript-types --workspace-id ws-xxxx --schemas public
 ```
 
 Do not store service-role keys, generated connection URLs, or migration SQL containing secrets in `.volcengine/created-resources.json`.

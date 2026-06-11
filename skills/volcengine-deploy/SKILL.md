@@ -186,7 +186,7 @@ Before starting ECS services or applying Kubernetes manifests, resolve runtime c
 Managed dependency wiring must be completed before health checks:
 
 - RDS database (`database_product=rds`, engine `mysql` / `postgresql` / `sqlserver`): create or reuse the instance, database, and app account; use the private endpoint; build `DATABASE_URL`; add the ECS/VKE subnet CIDR or security group source to the database allowlist; run migrations explicitly when `migration_paths` is non-empty.
-- AIDAP database (`database_product=aidap`, engine `supabase` / `postgresql`): call `volcengine-supabase` to create or reuse the workspace, branch, app DB account/database, and return database/AIDAP env values before app health checks.
+- AIDAP database (`database_product=aidap`, engine `supabase` / `postgresql`): call `volcengine-db-supabase` to create or reuse the workspace, branch, app DB account/database, and return database/AIDAP env values before app health checks.
 - Redis: create or reuse the instance and app account/password; use the private endpoint; build `REDIS_URL`; add the ECS/VKE subnet CIDR or security group source to the Redis allowlist.
 - If the user declines managed services for a detected dependency, state the persistence/scaling tradeoff and wire the chosen alternative into the same env/Secret path.
 
