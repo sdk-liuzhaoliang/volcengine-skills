@@ -2,32 +2,26 @@
 
 **English** | [简体中文](./README.md)
 
-A skills repository maintained by the Volcengine team, targeting Volcengine use cases and providing out-of-the-box skills for agents such as Claude Code / Codex / OpenCode / Cursor / Gemini CLI.
+Volcengine Skills is a **Skill Marketplace** maintained by the Volcengine team for Claude Code, Codex, OpenCode, Cursor, Gemini CLI, and other agents. This repository is not a single monolithic bundle. It is a **multi-plugin repository**: install the core plugin by default, then install product-domain plugins on demand.
 
-**[Quick Install →](#quick-install)**
+**[Quick Install →](#quick-install)** | **[Usage →](#usage)**
 
-## What's Included
+## Design Model
 
-### Skills
+### Core Plugin
 
-| Skill | Use case |
-| --- | --- |
-| `volcengine-cli` | Create/query/manage cloud resources via the `ve` CLI (ECS/VPC/CLB/RDS/Redis/TOS, etc.) |
-| `volcengine-prepare` | Analyze a local directory or GitHub repo and recommend a deployment shape (ECS/VKE/veFaaS) |
-| `volcengine-deploy` | Deploy a local directory or GitHub repo to Volcengine |
-| `volcengine-iac` | Terraform-based infrastructure orchestration for Volcengine |
-| `volcengine-api` | Query Volcengine API specs (parameters, error codes, response structures, etc.) |
-| `volcengine-sdk-generator` | Generate runnable Volcengine SDK examples and answer SDK config questions on demand |
-| `volcengine-tosutil` | Manage Volcengine TOS object storage resources |
-| `volcengine-vefaas` | Deploy and manage Volcengine veFaaS serverless applications |
-| `volcengine-db-supabase` | Manage Volcengine AIDAP database workspaces (Supabase / PostgreSQL) and use them as deployment database providers |
-| `volcengine-troubleshooting` | Troubleshoot and diagnose Volcengine issues |
-| `volcengine-knowledge-search` | Search Volcengine official docs and fetch full text (product concepts/usage/billing/deploy/best practices/terms) |
-| `volcengine-find-skill` | Discover and recommend optional plugins / skills from the Volcengine skills marketplace (currently a mock OpenAPI prototype) |
+`volcengine-skills` is the default core plugin. It is backed by the root `skills/` directory and preserves compatibility with the existing install model:
+
+- `volcengine-cli`: operate Volcengine resources through the `ve` CLI
+- `volcengine-prepare` / `volcengine-deploy`: analyze and deploy projects to Volcengine
+- `volcengine-api` / `volcengine-sdk-generator`: query API specs and generate SDK examples
+- `volcengine-knowledge-search`: search Volcengine official docs
+- `volcengine-troubleshooting`: troubleshoot Volcengine issues
+- `volcengine-find-skill`: discover and recommend optional plugins / skills
 
 ### Optional Plugins
 
-The root `skills/` directory remains the core install. More focused product-domain capabilities are split into optional plugins. Users can install them directly or ask `volcengine-find-skill` for a recommendation first.
+More focused product-domain capabilities live under `plugins/volcengine-*` and can be installed on demand:
 
 | Plugin | Use case | Example Skill |
 | --- | --- | --- |
@@ -37,87 +31,165 @@ The root `skills/` directory remains the core install. More focused product-doma
 | `volcengine-serverless` | veFaaS / functions / gateways / serverless deployment | `volcengine-serverless-vefaas-ops` |
 | `volcengine-iac` | Terraform / landing zone / modules / IaC orchestration | `volcengine-iac-terraform-ops` |
 
+### Find Skill
+
+`volcengine-find-skill` ships with the core plugin. Users can install only core first, then ask it which optional plugin to install.
+
+Example:
+
+```text
+Which Volcengine skill should I install to troubleshoot RDS slow queries?
+```
+
+It returns the recommended plugin, matching skill, reason, and install instructions for Codex / Claude Code / npx. The current implementation uses a mock OpenAPI script. When the real endpoint is ready, replace the lookup function in `skills/volcengine-find-skill/scripts/find_skill.py`.
+
 ## Quick Install
 
-### Prerequisites
+### Recommended: Install Through Plugin Marketplace
 
-#### Install ve and vefaas
+This is a multi-plugin marketplace. Add the marketplace first, then install core or optional plugins.
 
-```bash
-npm i -g @volcengine/cli
-npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.tgz
-```
+#### Codex
 
-#### Install tosutil
-
-See [installation commands](./skills/volcengine-tosutil/SKILL.md#安装命令).
-
-### Generic Install
+Add the marketplace:
 
 ```bash
-# Choose one of the following three
-
-# 1) Recommended: install globally, skip all confirmation prompts
-npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes
-
-# 2) Interactive: manually choose scope (global/project), target agents, and specific skills
-npx skills add sdk-liuzhaoliang/volcengine-skills
-
-# 3) Install to specific agents only, copying files instead of symlinking (eg. Claude Code)
-npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes --agent claude-code --copy
-
-# Or copy manually
-# Copy the skills/ directory to ~/.claude/skills/ (for Claude Code)
-# Copy the skills/ directory to ~/.agents/skills/ (for Codex, etc.)
+codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
-### Claude Code
+Then open Codex and run:
 
-**Add the marketplace** (first time only):
+```text
+/plugins
+```
+
+Install from the `Volcengine Skills` marketplace:
+
+- `volcengine-skills`: core plugin, recommended first
+- `volcengine-compute`: compute extension
+- `volcengine-database`: database extension
+- `volcengine-storage`: storage extension
+- `volcengine-serverless`: serverless extension
+- `volcengine-iac`: IaC extension
+
+#### Claude Code
+
+Add the marketplace:
 
 ```bash
 /plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
-**Install and reload the plugin**:
+Install the core plugin:
 
 ```bash
 /plugin install volcengine@volcengine-skills
 /reload-plugins
 ```
 
-**Install optional plugins**:
+Install optional plugins when needed:
 
 ```bash
 /plugin install volcengine-database@volcengine-skills
 /plugin install volcengine-storage@volcengine-skills
+/plugin install volcengine-serverless@volcengine-skills
 ```
 
-**Update**:
+Update the marketplace:
 
 ```bash
 /plugin marketplace update volcengine-skills
 ```
 
-### Codex
+### Compatible: Install Core Skills Only
+
+If your agent does not support plugin marketplaces yet, use `npx skills add` to install the root `skills/` directory, which means core skills only:
 
 ```bash
-codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
+npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes
+```
+
+Interactive install:
+
+```bash
+npx skills add sdk-liuzhaoliang/volcengine-skills
+```
+
+Install skills from one optional plugin:
+
+```bash
+npx skills add sdk-liuzhaoliang/volcengine-skills/tree/main/plugins/volcengine-database/skills
+```
+
+Manual copy:
+
+```text
+Copy skills/ to ~/.claude/skills/     # Claude Code
+Copy skills/ to ~/.agents/skills/     # Codex, etc.
+```
+
+## Usage
+
+### Option 1: Install Core, Then Use Find Skill
+
+After installing `volcengine-skills`, ask your agent:
+
+```text
+Which skill should I use to deploy this project to Volcengine?
 ```
 
 ```text
-Then open Codex, run /plugins, and install volcengine-skills or an optional plugin.
+Which plugin should I install to troubleshoot TOS bucket permissions?
 ```
-
-### Discover Optional Skills
-
-After installing core, ask the agent to use `volcengine-find-skill` to recommend optional plugins:
 
 ```text
-Which Volcengine skill should I install to troubleshoot RDS slow queries?
+Find a Volcengine skill for Redis connection failures.
 ```
 
-The finder currently uses a mock OpenAPI script. When the real endpoint is ready, replace the lookup function in `skills/volcengine-find-skill/scripts/find_skill.py`.
+The agent uses `volcengine-find-skill` and recommends something like:
+
+```text
+Install volcengine-database. The best matching skill is volcengine-database-rds-ops.
+Reason: it matches database connection diagnosis, slow query triage, and migration planning.
+Codex: add the marketplace, then install volcengine-database from /plugins.
+Claude Code: /plugin install volcengine-database@volcengine-skills
+```
+
+### Option 2: Install a Known Product-Domain Plugin Directly
+
+If you already know the scenario, install the matching plugin directly:
+
+| Need | Install |
+| --- | --- |
+| ECS / VKE / CLB | `volcengine-compute` |
+| RDS / Redis / AIDAP | `volcengine-database` |
+| TOS / object storage | `volcengine-storage` |
+| veFaaS / functions | `volcengine-serverless` |
+| Terraform / landing zone | `volcengine-iac` |
+
+### Option 3: Use Core Capabilities Only
+
+Installing only `volcengine-skills` is enough for base workflows:
+
+- Query API parameters, errors, and response structures
+- Generate SDK examples
+- Search official docs
+- Operate resources through the `ve` CLI
+- Analyze and deploy projects
+- Run general troubleshooting workflows
+
+## Prerequisites
+
+Some skills call local tools. Install them as needed:
+
+```bash
+npm i -g @volcengine/cli
+npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.tgz
+```
+
+For TOS tooling, see [installation commands](./skills/volcengine-tosutil/SKILL.md#安装命令).
+
+## Other Agents
 
 ### Gemini CLI
 
@@ -143,15 +215,22 @@ Type the following in the Cursor Agent chat:
 
 ## Directory Structure
 
-```
+```text
 volcengine-skills/
-├── skills/                 # Core skills, preserving default install compatibility
-├── plugins/                # Optional product-domain plugins
-├── .claude-plugin/         # Claude Code plugin / marketplace manifest
-├── .codex-plugin/          # Codex plugin / marketplace manifest
-├── .opencode/              # OpenCode configuration
-├── .cursor/                # Cursor rules
-└── gemini-extension.json   # Gemini CLI extension manifest
+├── skills/                     # Core skills, default install and compatibility path
+├── plugins/
+│   ├── volcengine-skills -> ..  # Core plugin marketplace entry
+│   ├── volcengine-compute/      # Optional compute plugin
+│   ├── volcengine-database/     # Optional database plugin
+│   ├── volcengine-storage/      # Optional storage plugin
+│   ├── volcengine-serverless/   # Optional serverless plugin
+│   └── volcengine-iac/          # Optional IaC plugin
+├── .claude-plugin/             # Claude Code marketplace manifest
+├── .codex-plugin/              # Codex core plugin manifest
+├── .agents/plugins/            # Codex marketplace manifest
+├── .opencode/                  # OpenCode configuration
+├── .cursor/                    # Cursor rules
+└── gemini-extension.json       # Gemini CLI extension manifest
 ```
 
 ## License

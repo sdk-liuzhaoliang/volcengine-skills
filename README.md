@@ -2,32 +2,26 @@
 
 [English](./README_en.md) | **简体中文**
 
-火山引擎团队维护的 skill 仓库，面向火山引擎（Volcengine）使用场景，为 Claude Code / Codex / OpenCode / Cursor / Gemini CLI 等 agent 提供开箱即用的 skills。
+Volcengine Skills 是火山引擎团队维护的 **Skill Marketplace**，面向 Claude Code / Codex / OpenCode / Cursor / Gemini CLI 等 agent。这个仓库不是单一大包，而是一个 **多 Plugin 仓库**：默认安装 core plugin，产品域能力按需安装。
 
-**[快速安装 →](#快速安装)**
+**[快速安装 →](#快速安装)** | **[如何使用 →](#如何使用)**
 
-## 仓库包含什么
+## 设计模型
 
-### Skills
+### Core Plugin
 
-| Skill | 场景 |
-| --- | --- |
-| `volcengine-cli` | 用 `ve` CLI 创建/查询/管理云资源（ECS/VPC/CLB/RDS/Redis/TOS 等） |
-| `volcengine-prepare` | 分析本地目录或 GitHub 仓库，推荐部署形态（ECS/VKE/veFaaS） |
-| `volcengine-deploy` | 把本地目录或 GitHub 仓库部署到火山引擎 |
-| `volcengine-iac` | 基于 Terraform 的火山引擎基础设施编排 |
-| `volcengine-api` | 查询火山引擎 API 规格（参数、错误码、返回结构等） |
-| `volcengine-sdk-generator` | 生成可运行的火山引擎 SDK 示例，并按需回答 SDK 配置问题 |
-| `volcengine-tosutil` | 管理火山引擎 TOS 对象存储资源 |
-| `volcengine-vefaas` | 部署与管理火山引擎 veFaaS serverless 应用 |
-| `volcengine-db-supabase` | 管理火山引擎 AIDAP 数据库 workspace（Supabase / PostgreSQL），并作为部署数据库方案 |
-| `volcengine-troubleshooting` | 火山引擎故障排查与诊断 |
-| `volcengine-knowledge-search` | 检索火山引擎官方文档并获取全文（产品概念/用法/计费/部署/最佳实践/服务条款等） |
-| `volcengine-find-skill` | 从火山引擎 skills marketplace 中发现并推荐可选 plugin / skill（当前为 mock OpenAPI 原型） |
+`volcengine-skills` 是默认安装的 core plugin，内容来自根目录 `skills/`。它保留基础能力和历史兼容性：
+
+- `volcengine-cli`：通过 `ve` CLI 操作火山引擎资源
+- `volcengine-prepare` / `volcengine-deploy`：分析项目并部署到火山引擎
+- `volcengine-api` / `volcengine-sdk-generator`：查询 API 规格并生成 SDK 示例
+- `volcengine-knowledge-search`：检索火山引擎官方文档
+- `volcengine-troubleshooting`：故障排查
+- `volcengine-find-skill`：发现并推荐可选 plugin / skill
 
 ### Optional Plugins
 
-当前 `skills/` 目录保持为 core 必装能力。更细的产品域能力拆成可选 plugin，用户可以直接安装，也可以先用 `volcengine-find-skill` 查询推荐。
+更细的产品域能力放在 `plugins/volcengine-*` 下，用户按需安装：
 
 | Plugin | 场景 | 示例 Skill |
 | --- | --- | --- |
@@ -37,87 +31,165 @@
 | `volcengine-serverless` | veFaaS / 函数 / 网关 / serverless 部署 | `volcengine-serverless-vefaas-ops` |
 | `volcengine-iac` | Terraform / Landing Zone / 模块 / IaC 编排 | `volcengine-iac-terraform-ops` |
 
+### Find Skill
+
+`volcengine-find-skill` 是 core plugin 自带的发现入口。用户只安装 core 时，可以先问它应该安装哪个可选 plugin。
+
+示例：
+
+```text
+我想排查 RDS 慢查询，应该装哪个火山引擎 skill？
+```
+
+它会返回推荐的 plugin、匹配的 skill、推荐理由，以及 Codex / Claude Code / npx 的安装方式。当前实现使用 mock OpenAPI 脚本，真实接口就绪后替换 `skills/volcengine-find-skill/scripts/find_skill.py` 的查询函数即可。
+
 ## 快速安装
 
-### 前置依赖
+### 推荐路径：通过 Plugin Marketplace 安装
 
-#### 安装 ve 和 vefaas
+这个仓库是多 plugin marketplace。先添加 marketplace，再安装 core 或可选 plugin。
 
-```bash
-npm i -g @volcengine/cli
-npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.tgz
-```
+#### Codex
 
-#### 安装 tosutil
-
-见 [安装命令](./skills/volcengine-tosutil/SKILL.md#安装命令)
-
-### 通用安装
+添加 marketplace：
 
 ```bash
-# 以下三条任选其一
-
-# 1) 推荐：全局安装、跳过所有确认提示
-npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes
-
-# 2) 交互式：手动选择安装范围（global/project）、目标 agent 和具体 skill
-npx skills add sdk-liuzhaoliang/volcengine-skills
-
-# 3) 只装到指定 agent，并用复制代替软链（如安装到 Claude Code）
-npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes --agent claude-code --copy
-
-# 或手动复制
-# 将 skills/ 目录复制到 ~/.claude/skills/ (适用于 Claude Code)
-# 将 skills/ 目录复制到 ~/.agents/skills/ (适用于 codex 等)
+codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
-### Claude Code
+然后进入 Codex，执行：
 
-**添加 marketplace**（仅首次）：
+```text
+/plugins
+```
+
+在 `Volcengine Skills` marketplace 中安装：
+
+- `volcengine-skills`：core plugin，推荐先装
+- `volcengine-compute`：计算扩展
+- `volcengine-database`：数据库扩展
+- `volcengine-storage`：存储扩展
+- `volcengine-serverless`：serverless 扩展
+- `volcengine-iac`：IaC 扩展
+
+#### Claude Code
+
+添加 marketplace：
 
 ```bash
 /plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
-**安装并重新加载 plugin**：
+安装 core plugin：
 
 ```bash
 /plugin install volcengine@volcengine-skills
 /reload-plugins
 ```
 
-**安装可选 plugin**：
+按需安装可选 plugin：
 
 ```bash
 /plugin install volcengine-database@volcengine-skills
 /plugin install volcengine-storage@volcengine-skills
+/plugin install volcengine-serverless@volcengine-skills
 ```
 
-**更新**：
+更新 marketplace：
 
 ```bash
 /plugin marketplace update volcengine-skills
 ```
 
-### Codex
+### 兼容路径：只安装 core skills
+
+如果你的 agent 暂时不支持 plugin marketplace，可以用 `npx skills add` 安装根目录 `skills/`，也就是 core skills：
 
 ```bash
-codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
+npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes
+```
+
+交互式安装：
+
+```bash
+npx skills add sdk-liuzhaoliang/volcengine-skills
+```
+
+安装某个可选 plugin 下的 skills：
+
+```bash
+npx skills add sdk-liuzhaoliang/volcengine-skills/tree/main/plugins/volcengine-database/skills
+```
+
+手动复制：
+
+```text
+将 skills/ 目录复制到 ~/.claude/skills/     # Claude Code
+将 skills/ 目录复制到 ~/.agents/skills/     # Codex 等
+```
+
+## 如何使用
+
+### 方式一：先装 core，再用 Find Skill 推荐
+
+安装 `volcengine-skills` 后，直接问 agent：
+
+```text
+我想把项目部署到火山引擎，应该用哪个 skill？
 ```
 
 ```text
-然后进入 Codex，执行 /plugins，选择 volcengine-skills 或可选 plugin 安装即可
+我想排查 TOS bucket 权限问题，需要安装哪个插件？
 ```
-
-### Discover Optional Skills
-
-安装 core 后，可以让 agent 使用 `volcengine-find-skill` 推荐可选插件：
 
 ```text
-我想排查 RDS 慢查询，应该装哪个火山引擎 skill？
+帮我找一个适合 Redis 连接失败排查的火山引擎 skill。
 ```
 
-当前 finder 使用 mock OpenAPI 脚本，真实接口就绪后可替换 `skills/volcengine-find-skill/scripts/find_skill.py` 中的查询函数。
+agent 会使用 `volcengine-find-skill`，推荐例如：
+
+```text
+推荐安装 volcengine-database，里面的 volcengine-database-rds-ops 最匹配。
+原因：匹配数据库连接诊断、慢查询、迁移规划等场景。
+Codex：codex plugin marketplace add ...，然后在 /plugins 安装 volcengine-database
+Claude Code：/plugin install volcengine-database@volcengine-skills
+```
+
+### 方式二：直接安装已知产品域 plugin
+
+如果你已经知道场景，可以直接安装对应 plugin：
+
+| 需求 | 安装 |
+| --- | --- |
+| ECS / VKE / CLB | `volcengine-compute` |
+| RDS / Redis / AIDAP | `volcengine-database` |
+| TOS / 对象存储 | `volcengine-storage` |
+| veFaaS / 函数 | `volcengine-serverless` |
+| Terraform / Landing Zone | `volcengine-iac` |
+
+### 方式三：只使用 core 基础能力
+
+只安装 `volcengine-skills` 也可以完成基础工作：
+
+- 查 API 参数、错误码和响应结构
+- 生成 SDK 示例
+- 检索官方文档
+- 使用 `ve` CLI 操作资源
+- 分析和部署项目
+- 做通用故障排查
+
+## 前置依赖
+
+部分 skill 会调用本地工具。按需安装：
+
+```bash
+npm i -g @volcengine/cli
+npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.tgz
+```
+
+TOS 工具见 [安装命令](./skills/volcengine-tosutil/SKILL.md#安装命令)。
+
+## 其他 Agent
 
 ### Gemini CLI
 
@@ -143,15 +215,22 @@ Fetch and follow instructions from https://github.com/sdk-liuzhaoliang/volcengin
 
 ## 目录结构
 
-```
+```text
 volcengine-skills/
-├── skills/                 # core skills，保持默认安装和历史兼容
-├── plugins/                # optional product-domain plugins
-├── .claude-plugin/         # Claude Code plugin / marketplace manifest
-├── .codex-plugin/          # Codex plugin / marketplace manifest
-├── .opencode/              # OpenCode 配置
-├── .cursor/                # Cursor 规则
-└── gemini-extension.json   # Gemini CLI 扩展清单
+├── skills/                     # core skills，默认安装和历史兼容
+├── plugins/
+│   ├── volcengine-skills -> ..  # core plugin marketplace 入口
+│   ├── volcengine-compute/      # optional compute plugin
+│   ├── volcengine-database/     # optional database plugin
+│   ├── volcengine-storage/      # optional storage plugin
+│   ├── volcengine-serverless/   # optional serverless plugin
+│   └── volcengine-iac/          # optional IaC plugin
+├── .claude-plugin/             # Claude Code marketplace manifest
+├── .codex-plugin/              # Codex core plugin manifest
+├── .agents/plugins/            # Codex marketplace manifest
+├── .opencode/                  # OpenCode 配置
+├── .cursor/                    # Cursor 规则
+└── gemini-extension.json       # Gemini CLI 扩展清单
 ```
 
 ## License
