@@ -15,8 +15,8 @@
       "author": {
         "name": "Volcengine Team"
       },
-      "homepage": "https://github.com/volcengine/volcengine-skills",
-      "repository": "https://github.com/volcengine/volcengine-skills",
+      "homepage": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "repository": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
       "license": "MIT",
       "keywords": [
         "volcengine",
@@ -28,6 +28,108 @@
         "skills"
       ],
       "category": "workflow"
+    },
+    {
+      "name": "volcengine-compute",
+      "source": "./plugins/volcengine-compute",
+      "description": "Optional Volcengine compute skills for ECS, VKE, CLB, and related cloud resource operation scenarios.",
+      "version": "1.0.4",
+      "author": {
+        "name": "Volcengine Team"
+      },
+      "homepage": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "repository": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "license": "MIT",
+      "keywords": [
+        "volcengine",
+        "compute",
+        "ecs",
+        "vke",
+        "clb",
+        "skills"
+      ],
+      "category": "compute"
+    },
+    {
+      "name": "volcengine-database",
+      "source": "./plugins/volcengine-database",
+      "description": "Optional Volcengine database skills for RDS, Redis, AIDAP/Supabase, migrations, query diagnostics, and database operations.",
+      "version": "1.0.4",
+      "author": {
+        "name": "Volcengine Team"
+      },
+      "homepage": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "repository": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "license": "MIT",
+      "keywords": [
+        "volcengine",
+        "database",
+        "rds",
+        "redis",
+        "supabase",
+        "skills"
+      ],
+      "category": "database"
+    },
+    {
+      "name": "volcengine-storage",
+      "source": "./plugins/volcengine-storage",
+      "description": "Optional Volcengine storage skills for TOS, object access, bucket policy, upload/download, lifecycle, and storage troubleshooting scenarios.",
+      "version": "1.0.4",
+      "author": {
+        "name": "Volcengine Team"
+      },
+      "homepage": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "repository": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "license": "MIT",
+      "keywords": [
+        "volcengine",
+        "storage",
+        "tos",
+        "object-storage",
+        "skills"
+      ],
+      "category": "storage"
+    },
+    {
+      "name": "volcengine-serverless",
+      "source": "./plugins/volcengine-serverless",
+      "description": "Optional Volcengine serverless skills for veFaaS application deployment, function operations, gateway checks, and serverless troubleshooting.",
+      "version": "1.0.4",
+      "author": {
+        "name": "Volcengine Team"
+      },
+      "homepage": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "repository": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "license": "MIT",
+      "keywords": [
+        "volcengine",
+        "serverless",
+        "vefaas",
+        "function",
+        "skills"
+      ],
+      "category": "serverless"
+    },
+    {
+      "name": "volcengine-iac",
+      "source": "./plugins/volcengine-iac",
+      "description": "Optional Volcengine IaC skills for Terraform, landing zone, reusable modules, infrastructure planning, and provisioning workflows.",
+      "version": "1.0.4",
+      "author": {
+        "name": "Volcengine Team"
+      },
+      "homepage": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "repository": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
+      "license": "MIT",
+      "keywords": [
+        "volcengine",
+        "iac",
+        "terraform",
+        "landing-zone",
+        "skills"
+      ],
+      "category": "infrastructure"
     }
   ]
 }

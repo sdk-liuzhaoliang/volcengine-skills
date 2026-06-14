@@ -1,7 +1,7 @@
 {
-  "name": "volcengine-skills",
+  "name": "volcengine-compute",
   "version": "1.0.4",
-  "description": "Skills for Volcengine (火山引擎) scenarios: cloud resource operations (ECS/VPC/VKE/CLB/RDS/Redis/TOS), deployment, IaC, and SDK code generation.",
+  "description": "Optional Volcengine compute skills for ECS, VKE, CLB, and related cloud resource operation scenarios.",
   "author": {
     "name": "Volcengine Team",
     "email": "volcengine@bytedance.com",
@@ -12,18 +12,17 @@
   "license": "MIT",
   "keywords": [
     "volcengine",
-    "cloud",
-    "cli",
+    "compute",
     "ecs",
     "vke",
-    "tos",
+    "clb",
     "skills"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Volcengine Skills",
-    "shortDescription": "Cloud operations, deployment, IaC, and SDK code generation for Volcengine",
-    "longDescription": "Use Volcengine Skills to operate Volcengine (火山引擎) cloud resources (ECS/VPC/VKE/CLB/RDS/Redis/TOS) via the ve CLI, deploy apps, manage infrastructure as code, and generate runnable SDK examples.",
+    "displayName": "Volcengine Compute",
+    "shortDescription": "Optional ECS, VKE, CLB, and compute operation skills for Volcengine",
+    "longDescription": "Use Volcengine Compute when you need focused workflows for compute resource planning, creation, inspection, and troubleshooting on Volcengine.",
     "developerName": "Volcengine Team",
     "category": "Coding",
     "capabilities": [
@@ -32,15 +31,12 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Create an ECS instance on Volcengine.",
-      "Deploy this repo to Volcengine."
+      "Help me create and verify an ECS instance on Volcengine.",
+      "Inspect compute resources for this Volcengine workload."
     ],
     "websiteURL": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
     "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
-    "brandColor": "#1664FF",
-    "composerIcon": "./docs/logo.svg",
-    "logo": "./docs/logo.svg",
-    "screenshots": []
+    "brandColor": "#1664FF"
   }
 }

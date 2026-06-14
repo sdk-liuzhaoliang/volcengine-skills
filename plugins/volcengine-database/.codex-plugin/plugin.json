@@ -1,7 +1,7 @@
 {
-  "name": "volcengine-skills",
+  "name": "volcengine-database",
   "version": "1.0.4",
-  "description": "Skills for Volcengine (火山引擎) scenarios: cloud resource operations (ECS/VPC/VKE/CLB/RDS/Redis/TOS), deployment, IaC, and SDK code generation.",
+  "description": "Optional Volcengine database skills for RDS, Redis, AIDAP/Supabase, migrations, query diagnostics, and database operations.",
   "author": {
     "name": "Volcengine Team",
     "email": "volcengine@bytedance.com",
@@ -12,18 +12,17 @@
   "license": "MIT",
   "keywords": [
     "volcengine",
-    "cloud",
-    "cli",
-    "ecs",
-    "vke",
-    "tos",
+    "database",
+    "rds",
+    "redis",
+    "supabase",
     "skills"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Volcengine Skills",
-    "shortDescription": "Cloud operations, deployment, IaC, and SDK code generation for Volcengine",
-    "longDescription": "Use Volcengine Skills to operate Volcengine (火山引擎) cloud resources (ECS/VPC/VKE/CLB/RDS/Redis/TOS) via the ve CLI, deploy apps, manage infrastructure as code, and generate runnable SDK examples.",
+    "displayName": "Volcengine Database",
+    "shortDescription": "Optional RDS, Redis, and database operation skills for Volcengine",
+    "longDescription": "Use Volcengine Database for database provisioning, connection diagnosis, migration planning, slow query investigation, and AIDAP/Supabase-oriented workflows.",
     "developerName": "Volcengine Team",
     "category": "Coding",
     "capabilities": [
@@ -32,15 +31,12 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Create an ECS instance on Volcengine.",
-      "Deploy this repo to Volcengine."
+      "Diagnose this Volcengine RDS connection issue.",
+      "Plan a Redis or RDS setup for this application."
     ],
     "websiteURL": "https://github.com/sdk-liuzhaoliang/volcengine-skills",
     "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
-    "brandColor": "#1664FF",
-    "composerIcon": "./docs/logo.svg",
-    "logo": "./docs/logo.svg",
-    "screenshots": []
+    "brandColor": "#1664FF"
   }
 }

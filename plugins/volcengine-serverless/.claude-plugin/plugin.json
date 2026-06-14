@@ -1,6 +1,6 @@
 {
-  "name": "volcengine",
-  "description": "Skills for Volcengine (火山引擎) scenarios: cloud resource operations (ECS/VPC/VKE/CLB/RDS/Redis/TOS), deployment, IaC, and SDK code generation.",
+  "name": "volcengine-serverless",
+  "description": "Optional Volcengine serverless skills for veFaaS application deployment, function operations, gateway checks, and serverless troubleshooting.",
   "version": "1.0.4",
   "author": {
     "name": "Volcengine Team"
@@ -10,11 +10,9 @@
   "license": "MIT",
   "keywords": [
     "volcengine",
-    "cloud",
-    "cli",
-    "ecs",
-    "vke",
-    "tos",
+    "serverless",
+    "vefaas",
+    "function",
     "skills"
   ],
   "skills": [

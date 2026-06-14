@@ -10,7 +10,7 @@
 
 1. **Clone 仓库：**
    ```bash
-   git clone git@github.com:volcengine/volcengine-skills.git ~/.config/opencode/volcengine-skills
+   git clone git@github.com:sdk-liuzhaoliang/volcengine-skills.git ~/.config/opencode/volcengine-skills
    ```
 
 2. **在 `opencode.json` 中添加 skills 路径：**
@@ -59,4 +59,4 @@ rm -rf ~/.config/opencode/volcengine-skills
 
 ## 问题反馈
 
-- Issue：https://github.com/volcengine/volcengine-skills/issues
+- Issue：https://github.com/sdk-liuzhaoliang/volcengine-skills/issues

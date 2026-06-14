@@ -23,6 +23,19 @@ A skills repository maintained by the Volcengine team, targeting Volcengine use 
 | `volcengine-db-supabase` | Manage Volcengine AIDAP database workspaces (Supabase / PostgreSQL) and use them as deployment database providers |
 | `volcengine-troubleshooting` | Troubleshoot and diagnose Volcengine issues |
 | `volcengine-knowledge-search` | Search Volcengine official docs and fetch full text (product concepts/usage/billing/deploy/best practices/terms) |
+| `volcengine-find-skill` | Discover and recommend optional plugins / skills from the Volcengine skills marketplace (currently a mock OpenAPI prototype) |
+
+### Optional Plugins
+
+The root `skills/` directory remains the core install. More focused product-domain capabilities are split into optional plugins. Users can install them directly or ask `volcengine-find-skill` for a recommendation first.
+
+| Plugin | Use case | Example Skill |
+| --- | --- | --- |
+| `volcengine-compute` | ECS / VKE / CLB / compute resource scenarios | `volcengine-compute-ecs-ops` |
+| `volcengine-database` | RDS / Redis / AIDAP / database diagnostics and migrations | `volcengine-database-rds-ops` |
+| `volcengine-storage` | TOS / object storage / lifecycle / access diagnosis | `volcengine-storage-tos-ops` |
+| `volcengine-serverless` | veFaaS / functions / gateways / serverless deployment | `volcengine-serverless-vefaas-ops` |
+| `volcengine-iac` | Terraform / landing zone / modules / IaC orchestration | `volcengine-iac-terraform-ops` |
 
 ## Quick Install
 
@@ -45,13 +58,13 @@ See [installation commands](./skills/volcengine-tosutil/SKILL.md#安装命令).
 # Choose one of the following three
 
 # 1) Recommended: install globally, skip all confirmation prompts
-npx skills add volcengine/volcengine-skills --global --yes
+npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes
 
 # 2) Interactive: manually choose scope (global/project), target agents, and specific skills
-npx skills add volcengine/volcengine-skills
+npx skills add sdk-liuzhaoliang/volcengine-skills
 
 # 3) Install to specific agents only, copying files instead of symlinking (eg. Claude Code)
-npx skills add volcengine/volcengine-skills --global --yes --agent claude-code --copy
+npx skills add sdk-liuzhaoliang/volcengine-skills --global --yes --agent claude-code --copy
 
 # Or copy manually
 # Copy the skills/ directory to ~/.claude/skills/ (for Claude Code)
@@ -63,7 +76,7 @@ npx skills add volcengine/volcengine-skills --global --yes --agent claude-code -
 **Add the marketplace** (first time only):
 
 ```bash
-/plugin marketplace add volcengine/volcengine-skills
+/plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
 **Install and reload the plugin**:
@@ -71,6 +84,13 @@ npx skills add volcengine/volcengine-skills --global --yes --agent claude-code -
 ```bash
 /plugin install volcengine@volcengine-skills
 /reload-plugins
+```
+
+**Install optional plugins**:
+
+```bash
+/plugin install volcengine-database@volcengine-skills
+/plugin install volcengine-storage@volcengine-skills
 ```
 
 **Update**:
@@ -82,17 +102,27 @@ npx skills add volcengine/volcengine-skills --global --yes --agent claude-code -
 ### Codex
 
 ```bash
-codex plugin marketplace add volcengine/volcengine-skills
+codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
 ```text
-Then open Codex, run /plugins, and select volcengine-skills to install.
+Then open Codex, run /plugins, and install volcengine-skills or an optional plugin.
 ```
+
+### Discover Optional Skills
+
+After installing core, ask the agent to use `volcengine-find-skill` to recommend optional plugins:
+
+```text
+Which Volcengine skill should I install to troubleshoot RDS slow queries?
+```
+
+The finder currently uses a mock OpenAPI script. When the real endpoint is ready, replace the lookup function in `skills/volcengine-find-skill/scripts/find_skill.py`.
 
 ### Gemini CLI
 
 ```bash
-gemini extensions install https://github.com/volcengine/volcengine-skills
+gemini extensions install https://github.com/sdk-liuzhaoliang/volcengine-skills
 ```
 
 ### OpenCode
@@ -100,7 +130,7 @@ gemini extensions install https://github.com/volcengine/volcengine-skills
 Type the following directly in OpenCode:
 
 ```text
-Fetch and follow instructions from https://github.com/volcengine/volcengine-skills/blob/main/.opencode/INSTALL.md
+Fetch and follow instructions from https://github.com/sdk-liuzhaoliang/volcengine-skills/blob/main/.opencode/INSTALL.md
 ```
 
 ### Cursor
@@ -108,14 +138,15 @@ Fetch and follow instructions from https://github.com/volcengine/volcengine-skil
 Type the following in the Cursor Agent chat:
 
 ```text
-/add-plugin volcengine-skills@https://github.com/volcengine/volcengine-skills
+/add-plugin volcengine-skills@https://github.com/sdk-liuzhaoliang/volcengine-skills
 ```
 
 ## Directory Structure
 
 ```
 volcengine-skills/
-├── skills/                 # All skills
+├── skills/                 # Core skills, preserving default install compatibility
+├── plugins/                # Optional product-domain plugins
 ├── .claude-plugin/         # Claude Code plugin / marketplace manifest
 ├── .codex-plugin/          # Codex plugin / marketplace manifest
 ├── .opencode/              # OpenCode configuration

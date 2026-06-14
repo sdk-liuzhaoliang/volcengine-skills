@@ -1,6 +1,6 @@
 {
-  "name": "volcengine",
-  "description": "Skills for Volcengine (火山引擎) scenarios: cloud resource operations (ECS/VPC/VKE/CLB/RDS/Redis/TOS), deployment, IaC, and SDK code generation.",
+  "name": "volcengine-compute",
+  "description": "Optional Volcengine compute skills for ECS, VKE, CLB, and related cloud resource operation scenarios.",
   "version": "1.0.4",
   "author": {
     "name": "Volcengine Team"
@@ -10,11 +10,10 @@
   "license": "MIT",
   "keywords": [
     "volcengine",
-    "cloud",
-    "cli",
+    "compute",
     "ecs",
     "vke",
-    "tos",
+    "clb",
     "skills"
   ],
   "skills": [
