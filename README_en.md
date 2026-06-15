@@ -191,6 +191,32 @@ npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.t
 
 For TOS tooling, see [installation commands](./skills/volcengine-tosutil/SKILL.md#安装命令).
 
+## Credentials and Configuration
+
+Skills that operate Volcengine products usually require credentials. The following methods are supported:
+
+### AccessKey Environment Variables
+
+```bash
+export VOLCENGINE_ACCESS_KEY=<your-access-key-id>
+export VOLCENGINE_SECRET_KEY=<your-secret-access-key>
+export VOLCENGINE_REGION=cn-beijing
+```
+
+### ve CLI Profile
+
+```bash
+ve configure
+```
+
+After configuration, credentials are stored in the local `ve` CLI profile. Skills such as `volcengine-cli`, deployment, troubleshooting, and resource operation workflows can reuse that profile.
+
+### Security Notes
+
+- For local testing, use AccessKey environment variables or `ve configure`.
+- Do not commit AK/SK values to repositories, logs, README files, shell scripts, or issues.
+- For production environments, prefer least-privilege policies and temporary credentials.
+
 ## Other Agents
 
 ### Gemini CLI

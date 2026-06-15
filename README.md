@@ -191,6 +191,32 @@ npm i -g https://vefaas-cli.tos-cn-beijing.volces.com/volcengine-vefaas-latest.t
 
 TOS 工具见 [安装命令](./skills/volcengine-tosutil/SKILL.md#安装命令)。
 
+## 凭证与配置
+
+使用火山引擎产品相关的 skills 通常需要配置凭证。支持以下方式：
+
+### AccessKey 环境变量
+
+```bash
+export VOLCENGINE_ACCESS_KEY=<your-access-key-id>
+export VOLCENGINE_SECRET_KEY=<your-secret-access-key>
+export VOLCENGINE_REGION=cn-beijing
+```
+
+### ve CLI 配置文件
+
+```bash
+ve configure
+```
+
+配置完成后，凭证会写入本地 `ve` CLI 配置文件，后续 `volcengine-cli`、部署、排障和资源操作类 skills 可以复用该配置。
+
+### 安全建议
+
+- 本地测试可以使用 AccessKey 环境变量或 `ve configure`。
+- 不要把 AK/SK 写入仓库、日志、README、脚本参数或 issue。
+- 生产环境优先使用最小权限策略和临时凭证方案。
+
 ## 其他 Agent
 
 ### Gemini CLI
