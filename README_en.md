@@ -206,14 +206,15 @@ export VOLCENGINE_REGION=cn-beijing
 ### ve CLI Profile
 
 ```bash
-ve configure
+# ~/.volcengine/config.json
+ve configure [--profile <PROFILE_NAME>]
 ```
 
-After configuration, credentials are stored in the local `ve` CLI profile. Skills such as `volcengine-cli`, deployment, troubleshooting, and resource operation workflows can reuse that profile.
+After configuration, credentials are stored in `~/.volcengine/config.json`. Skills such as `volcengine-cli`, deployment, troubleshooting, and resource operation workflows can reuse that profile.
 
 ### Security Notes
 
-- For local testing, use AccessKey environment variables or `ve configure`.
+- For local testing, use AccessKey environment variables or `ve configure [--profile <PROFILE_NAME>]`.
 - Do not commit AK/SK values to repositories, logs, README files, shell scripts, or issues.
 - For production environments, prefer least-privilege policies and temporary credentials.
 
