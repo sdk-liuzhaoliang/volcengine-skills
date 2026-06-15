@@ -21,7 +21,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Volcengine Skills",
+    "displayName": "[必装] Volcengine Skills",
     "shortDescription": "Cloud operations, deployment, IaC, and SDK code generation for Volcengine",
     "longDescription": "Use Volcengine Skills to operate Volcengine (火山引擎) cloud resources (ECS/VPC/VKE/CLB/RDS/Redis/TOS) via the ve CLI, deploy apps, manage infrastructure as code, and generate runnable SDK examples.",
     "developerName": "Volcengine Team",
