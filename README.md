@@ -74,6 +74,12 @@ codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 - `volcengine-serverless`：serverless 扩展
 - `volcengine-iac`：IaC 扩展
 
+更新 marketplace
+```bash
+codex plugin marketplace upgrade volcengine-skills
+```
+
+
 #### Claude Code
 
 添加 marketplace：
