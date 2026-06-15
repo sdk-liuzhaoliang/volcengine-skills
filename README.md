@@ -2,7 +2,7 @@
 
 [English](./README_en.md) | **简体中文**
 
-Volcengine Skills 是火山引擎团队维护的 **Skill Marketplace**，面向 Claude Code / Codex / OpenCode / Cursor / Gemini CLI 等 agent。这个仓库不是单一大包，而是一个 **多 Plugin 仓库**：默认安装 core plugin，产品域能力按需安装。
+Volcengine Skills 是火山引擎团队维护的 **Skill Marketplace**，面向 Claude Code / Codex / OpenCode / Cursor / Gemini CLI 等 agent。这个仓库不是单一大包，而是一个 **多 Plugin 仓库**：核心是 core plugin，产品域能力按需安装。
 
 **[快速安装 →](#快速安装)** | **[如何使用 →](#如何使用)**
 
@@ -10,7 +10,7 @@ Volcengine Skills 是火山引擎团队维护的 **Skill Marketplace**，面向 
 
 ### Core Plugin
 
-`volcengine-skills` 是默认安装的 core plugin，内容来自根目录 `skills/`。它保留基础能力和历史兼容性：
+`volcengine-skills` 是默认安装的 core plugin，内容来自根目录 `skills/`
 
 - `volcengine-cli`：通过 `ve` CLI 操作火山引擎资源
 - `volcengine-prepare` / `volcengine-deploy`：分析项目并部署到火山引擎
