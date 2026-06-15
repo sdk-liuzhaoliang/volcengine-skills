@@ -1,7 +1,7 @@
 {
   "name": "volcengine-skills",
   "interface": {
-    "displayName": "[必装] Volcengine Skills"
+    "displayName": "Volcengine Skills"
   },
   "plugins": [
     {
