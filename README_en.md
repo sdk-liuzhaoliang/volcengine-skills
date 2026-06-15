@@ -63,9 +63,11 @@ Then open Codex and run:
 /plugins
 ```
 
-Install from the `Volcengine Skills` marketplace:
+After adding the marketplace, Codex treats `volcengine-skills` as the default installed plugin. If your Codex version does not install it automatically, install the core plugin manually before installing extension plugins.
 
-- `volcengine-skills`: core plugin, recommended first
+In the `Volcengine Skills` marketplace you will see:
+
+- `volcengine-skills`: core plugin, installed by default
 - `volcengine-compute`: compute extension
 - `volcengine-database`: database extension
 - `volcengine-storage`: storage extension
@@ -80,7 +82,7 @@ Add the marketplace:
 /plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
-Install the core plugin:
+Install the core plugin. Claude Code currently requires this explicit install:
 
 ```bash
 /plugin install volcengine@volcengine-skills

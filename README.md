@@ -63,9 +63,11 @@ codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 /plugins
 ```
 
-在 `Volcengine Skills` marketplace 中安装：
+添加 marketplace 后，Codex 会把 `volcengine-skills` 作为默认安装项。若你的 Codex 版本没有自动安装，请先手动安装 core plugin，再安装扩展 plugin。
 
-- `volcengine-skills`：core plugin，推荐先装
+在 `Volcengine Skills` marketplace 中可以看到：
+
+- `volcengine-skills`：core plugin，默认安装项
 - `volcengine-compute`：计算扩展
 - `volcengine-database`：数据库扩展
 - `volcengine-storage`：存储扩展
@@ -80,7 +82,7 @@ codex plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 /plugin marketplace add sdk-liuzhaoliang/volcengine-skills
 ```
 
-安装 core plugin：
+安装 core plugin（Claude Code 目前需要显式安装）：
 
 ```bash
 /plugin install volcengine@volcengine-skills
